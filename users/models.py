@@ -58,7 +58,24 @@ class User(AbstractUser):
     updated_at = models.DateTimeField(auto_now=True)
 
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = []
+    REQUIRED_FIELDS = ["first_name", "last_name"] #this is basically when we create the super user that time its ask for the this two filds also
 
     def __str__(self):
         return self.email
+
+
+from django.db import models
+import random
+from django.utils import timezone
+
+class OTP(models.Model):
+    email = models.EmailField()
+    otp = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def is_expired(self):
+        # OTP expires after 5 minutes
+        return (timezone.now() - self.created_at).seconds > 300
+
+    def __str__(self):
+        return f"{self.email} - {self.otp}"

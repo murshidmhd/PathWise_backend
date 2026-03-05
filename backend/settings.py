@@ -39,10 +39,14 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "users",
     "rest_framework",
+    "rest_framework.authtoken",
+    "rest_framework_simplejwt.token_blacklist",
     "drf_spectacular",
+    "corsheaders",
 ]
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -55,12 +59,11 @@ MIDDLEWARE = [
 ROOT_URLCONF = "backend.urls"
 REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ),
 }
-SPECTACULAR_SETTINGS = {
-    "TITLE": "PathWise API",
-    "DESCRIPTION": "Career Guidance Platform API",
-    "VERSION": "1.0.0",
-}
+
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
@@ -129,3 +132,34 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = "static/"
+
+
+CORS_ALLOW_CREDENTIALS = True
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "PathWise API",
+    "DESCRIPTION": "Career Guidance Platform API",
+    "VERSION": "1.0.0",
+}
+
+
+from dotenv import load_dotenv
+import os
+
+load_dotenv()  # its read the env file 
+
+GOOGLE_CLIENT_ID = os.getenv("REACT_APP_GOOGLE_CLIENT_ID")
+
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",  
+]
+
+
+# Email settings
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'murshidmuhammad65@gmail.com'      # your Gmail
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")      # Gmail app password (not your normal password)
