@@ -62,6 +62,19 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+        "rest_framework.throttling.ScopedRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "100/day",
+        "user": "1000/day",
+        "login": "5/min",
+        "otp_send": "3/min",
+        "otp_verify": "10/min",
+        "google_auth": "10/min",
+    },
 }
 
 TEMPLATES = [
@@ -146,20 +159,37 @@ SPECTACULAR_SETTINGS = {
 from dotenv import load_dotenv
 import os
 
-load_dotenv()  # its read the env file 
+load_dotenv()  # its read the env file
 
 GOOGLE_CLIENT_ID = os.getenv("REACT_APP_GOOGLE_CLIENT_ID")
 
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",  
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",  # ← add this
 ]
 
 
 # Email settings
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'murshidmuhammad65@gmail.com'      # your Gmail
-EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")      # Gmail app password (not your normal password)
+EMAIL_HOST_USER = "murshidmuhammad65@gmail.com"  # your Gmail
+EMAIL_HOST_PASSWORD = os.getenv(
+    "EMAIL_HOST_PASSWORD"
+)  # Gmail app password (not your normal password)
+
+
+SESSION_COOKIE_SAMESITE = "None"
+SESSION_COOKIE_SECURE = False
+
+
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(seconds=10),  # Short-lived access token
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),  # Adjust this 👈
+    "ROTATE_REFRESH_TOKENS": False,  # Set True to issue a new refresh token on each use
+    "BLACKLIST_AFTER_ROTATION": True,  # Requires 'rest_framework_simplejwt.token_blacklist' in INSTALLED_APPS
+}
