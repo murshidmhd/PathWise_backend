@@ -11,21 +11,40 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
+import os
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR / ".env")
+
+
+def env_bool(name: str, default: bool = False) -> bool:
+    return os.getenv(name, str(default)).strip().lower() in {
+        "1",
+        "true",
+        "t",
+        "yes",
+        "y",
+        "on",
+    }
+
+
+def env_list(name: str, default: str = "") -> list[str]:
+    raw_value = os.getenv(name, default)
+    return [item.strip() for item in raw_value.split(",") if item.strip()]
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-+%*#pw_xk%tk$yw883*v$w!ir3=gtf%^yq_+dogtj8o4g1!oya"
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "django-insecure-change-me")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env_bool("DJANGO_DEBUG", True)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
 
 
 # Application definition
@@ -37,12 +56,14 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "users",
+    "accounts",
     "rest_framework",
     "rest_framework.authtoken",
     "rest_framework_simplejwt.token_blacklist",
     "drf_spectacular",
     "corsheaders",
+    "students",
+    "counselors",
 ]
 
 MIDDLEWARE = [
@@ -100,16 +121,16 @@ WSGI_APPLICATION = "backend.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": "career_db",
-        "USER": "career_user",
-        "PASSWORD": "786786msyt",
-        "HOST": "localhost",
-        "PORT": "5432",
+        "ENGINE": os.getenv("DB_ENGINE", "django.db.backends.postgresql"),
+        "NAME": os.getenv("DB_NAME", "career_db"),
+        "USER": os.getenv("DB_USER", "career_user"),
+        "PASSWORD": os.getenv("DB_PASSWORD", ""),
+        "HOST": os.getenv("DB_HOST", "localhost"),
+        "PORT": os.getenv("DB_PORT", "5432"),
     }
 }
 
-AUTH_USER_MODEL = "users.User"
+AUTH_USER_MODEL = "accounts.User"
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
 
@@ -154,20 +175,19 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "Career Guidance Platform API",
     "VERSION": "1.0.0",
 }
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID") or os.getenv(
+    "REACT_APP_GOOGLE_CLIENT_ID"
+)
+RECAPTCHA_SITE_KEY = os.getenv("RECAPTCHA_SITE_KEY", "")
+RECAPTCHA_SECRET_KEY = os.getenv("RECAPTCHA_SECRET_KEY", "")
+RECAPTCHA_VERIFY_URL = os.getenv(
+    "RECAPTCHA_VERIFY_URL", "https://www.google.com/recaptcha/api/siteverify"
+)
 
 
-from dotenv import load_dotenv
-import os
-
-load_dotenv()  # its read the env file
-
-GOOGLE_CLIENT_ID = os.getenv("REACT_APP_GOOGLE_CLIENT_ID")
-
-
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",  # ← add this
-]
+CORS_ALLOWED_ORIGINS = env_list(
+    "CORS_ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"
+)
 
 
 # Email settings
@@ -175,14 +195,12 @@ EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = "murshidmuhammad65@gmail.com"  # your Gmail
-EMAIL_HOST_PASSWORD = os.getenv(
-    "EMAIL_HOST_PASSWORD"
-)  # Gmail app password (not your normal password)
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
 
 
-SESSION_COOKIE_SAMESITE = "None"
-SESSION_COOKIE_SECURE = False
+SESSION_COOKIE_SAMESITE = os.getenv("SESSION_COOKIE_SAMESITE", "None")
+SESSION_COOKIE_SECURE = env_bool("SESSION_COOKIE_SECURE", False)
 
 
 from datetime import timedelta
