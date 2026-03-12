@@ -1,8 +1,8 @@
 from django.urls import path
 
-from .views import CounselorProfileMeView
+from .views import CounselorProfileView
 
 
 urlpatterns = [
-    path("me/", CounselorProfileMeView.as_view(), name="counselor-profile-me"),
+    path("profile/", CounselorProfileView.as_view(), name="counselor-profile"),
 ]

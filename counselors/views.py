@@ -4,26 +4,37 @@ from rest_framework.views import APIView
 
 from .models import CounselorProfile
 from .serializers import CounselorProfileSerializer
+from rest_framework.parsers import MultiPartParser, FormParser
 
-
-class CounselorProfileMeView(APIView):
+class CounselorProfileView(APIView):
     permission_classes = [IsAuthenticated]
+    # parser_classes = [MultiPartParser, FormParser]
 
     def get(self, request):
-        profile = CounselorProfile.objects.filter(user=request.user).first()
-        if not profile:
-            return Response({"error": "Counselor profile not found"}, status=404)
+
+        try:
+            profile = CounselorProfile.objects.get(user=request.user)
+        except CounselorProfile.DoesNotExist:
+            return Response({"detail": "Profile not found."}, status=404)
+
         serializer = CounselorProfileSerializer(profile)
-        return Response(serializer.data, status=200)
+        return Response(serializer.data)
 
     def patch(self, request):
-        profile = CounselorProfile.objects.filter(user=request.user).first()
-        if not profile:
-            return Response({"error": "Counselor profile not found"}, status=404)
+
+        try:
+
+            profile = CounselorProfile.objects.get(user=request.user)
+
+        except CounselorProfile.DoesNotExist:
+            return Response({"detail": "Profile not found."}, status=404)
+
         serializer = CounselorProfileSerializer(
             profile, data=request.data, partial=True
         )
+
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=200)
+
+            return Response(serializer.data)
         return Response(serializer.errors, status=400)

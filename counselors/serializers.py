@@ -4,10 +4,43 @@ from .models import CounselorProfile
 
 
 class CounselorProfileSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(source="user.email", read_only=True)
+    certificate_url = serializers.FileField(required=False, allow_null=True)
+
     class Meta:
         model = CounselorProfile
-        fields = "__all__"
-        read_only_fields = ("id", "user", "created_at", "updated_at")
+        fields = [
+            "id",
+            "email",
+            "full_name",
+            "phone",
+            "city",
+            "state",
+            "experience_years",
+            "qualification",
+            "specialization",
+            "bio",
+            "certificate_url",
+            "approval_status",
+            "rejection_reason",
+            "rating",
+            "total_students",
+            "is_available",
+            "profile_photo",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = (
+            "id",
+            "user",
+            "created_at",
+            "updated_at",
+            "approval_status",
+            "rejection_reason",
+            "rating",
+            "total_students",
+            "certificate_url",
+        )
 
 
 def create_counselor_profile(

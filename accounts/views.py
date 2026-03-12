@@ -49,7 +49,9 @@ class RegisterView(APIView):
 
     @extend_schema(
         tags=["Auth"],
-        request=RegisterSerializer,
+        request={
+            "multipart/form-data": RegisterSerializer,
+        },
         responses={
             200: OpenApiTypes.OBJECT,
             400: OpenApiTypes.OBJECT,
