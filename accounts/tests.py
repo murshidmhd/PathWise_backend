@@ -28,3 +28,17 @@ class AuthTests(TestCase):
         # send POST to /api/auth/register/
         # check status code is 200
         # check OTP email was sent
+
+    def test_password_mismatch(self):
+        response = self.client.post(
+            "/api/auth/register/",
+            {
+                "email": "test@example.com",
+                "password": "Test1234!",
+                "confirm_password": "Wrong1234!",
+                "role": "student",
+                "first_name": "Test",
+                "last_name": "User",
+            },
+        )
+        self.assertEqual(response.status_code, 400)

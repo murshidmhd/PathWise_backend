@@ -9,12 +9,14 @@ class RegisterSerializer(serializers.ModelSerializer):
     confirm_password = serializers.CharField(write_only=True)
     # print("SERIALIZER")
 
-
     qualification = serializers.CharField(required=False, allow_blank=True)
     experience_years = serializers.IntegerField(required=False, allow_null=True)
     specialization = serializers.CharField(required=False, allow_blank=True)
-    certificate = serializers.FileField(required=False, allow_null=True , )
-    
+    certificate = serializers.FileField(
+        required=False,
+        allow_null=True,
+    )
+
     # print("SERIALIZER")
 
     class Meta:
@@ -31,9 +33,29 @@ class RegisterSerializer(serializers.ModelSerializer):
             "specialization",
             "certificate",
         ]
-        
-    print("i am here create")
 
+    # print("i am here create")
+
+    def validate_password(self, value):
+        if len(value) < 8:
+            raise serializers.ValidationError("Password must be at least 8 characters.")
+        if not any(c.isupper() for c in value):
+            raise serializers.ValidationError(
+                "Password must contain at least one uppercase letter."
+            )
+        if not any(c.islower() for c in value):
+            raise serializers.ValidationError(
+                "Password must contain at least one lowercase letter."
+            )
+        if not any(c.isdigit() for c in value):
+            raise serializers.ValidationError(
+                "Password must contain at least one number."
+            )
+        if not any(c in "!@#$%^&*()_+-=[]{}|;:,.<>?" for c in value):
+            raise serializers.ValidationError(
+                "Password must contain at least one special character."
+            )
+        return value
 
     def validate(self, data):
         if data["password"] != data["confirm_password"]:
@@ -51,17 +73,16 @@ class RegisterSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
-        
+
         # print(validated_data)
-        
 
         validated_data.pop("confirm_password")
         qualification = validated_data.pop("qualification", None)
         experience_years = validated_data.pop("experience_years", None)
         specialization = validated_data.pop("specialization", None)
         certificate = validated_data.pop("certificate", None)
-        
-        print(certificate)
+
+        # print(certificate)
 
         role = validated_data.get("role")
         email = validated_data.get("email")
@@ -78,17 +99,15 @@ class RegisterSerializer(serializers.ModelSerializer):
         )
         user.is_active = True
         user.save()
-        
+
         # print("i am her before the role check")
 
         if role == "student":
             create_student_profile(user=user)
-            
 
         elif role == "parent":
             # ParentProfile.objects.create(user=user)
             pass
-            
 
         elif role == "counselor":
             create_counselor_profile(
@@ -117,7 +136,7 @@ class LoginSerializer(serializers.Serializer):
         email = data.get("email")
         password = data.get("password")
 
-        print(email, password)
+        # print(email, password)
 
         User = get_user_model()
         user_obj = User.objects.filter(email=email).first()
@@ -130,9 +149,9 @@ class LoginSerializer(serializers.Serializer):
         user = authenticate(username=email, password=password)
         if not user:
             raise serializers.ValidationError("Authentication failed")
-        print(f"user is this:{user}")
+        # print(f"user is this:{user}")
 
-        data["user"] = user 
+        data["user"] = user
         return data
 
 
