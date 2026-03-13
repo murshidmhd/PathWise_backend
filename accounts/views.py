@@ -347,6 +347,7 @@ from google.auth.transport import requests as google_requests
 
 from backend import settings as backend_settings
 from .models import User
+import secrets
 
 
 class GoogleAuthView(APIView):
@@ -378,19 +379,33 @@ class GoogleAuthView(APIView):
         first_name = google_user.get("given_name", "")
         last_name = google_user.get("family_name", "")
 
-        user, created = User.objects.get_or_create(
-            email=email,
-            defaults={
-                "first_name": first_name,
-                "last_name": last_name,
-                "email": email,
-            },
-        )
+        user_exists = User.objects.filter(email=email).exists()
+
+        if not user_exists:
+            # new user - store in cache, ask for role
+            temp_token = secrets.token_urlsafe(32)
+            cache.set(
+                f"google_temp:{temp_token}",
+                {
+                    "email": email,
+                    "first_name": first_name,
+                    "last_name": last_name,
+                },
+                timeout=600,
+            )
+            return Response({"is_new_user": True, "temp_token": temp_token}, status=200)
+
+        # existing user - give JWT
+        user = User.objects.get(email=email)
 
         refresh = RefreshToken.for_user(user)
 
         response = Response(
-            {"access": str(refresh.access_token), "is_new_user": created},
+            {
+                "access": str(refresh.access_token),
+                "is_new_user": False,
+                "role": user.role,
+            },
             status=200,
         )
 
@@ -404,3 +419,50 @@ class GoogleAuthView(APIView):
         )
 
         return response
+
+
+from students.serializers import create_student_profile
+
+
+class CompleteGoogleRegistrationView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        temp_token = request.data.get("temp_token")
+        role = request.data.get("role")
+
+        user_data = cache.get(f"google_temp:{temp_token}")
+        if not user_data:
+            return Response({"message": "Invalid or expired token"}, status=400)
+
+        email = user_data.get("email")
+        first_name = user_data.get("first_name")
+        last_name = user_data.get("last_name")
+
+        user = User.objects.create_user(
+            email=email,
+            # password=password,
+            role=role,
+            first_name=first_name,
+            last_name=last_name,
+        )
+        if role == "student":
+            create_student_profile(user=user)
+
+        elif role == "parent":
+            pass  # add later
+        elif role == "counselor":
+            pass  # counselor needs certificate — handle differently
+
+        cache.delete(f"google_temp:{temp_token}")
+
+        refresh = RefreshToken.for_user(user)
+        return Response({"access": str(refresh.access_token)}, status=201)
+
+
+# 1. get user data from cache using temp_token
+# 2. if not found → return 400 "Invalid or expired token"
+# 3. create the user with email, first_name, last_name, role
+# 4. create profile based on role
+# 5. return JWT
