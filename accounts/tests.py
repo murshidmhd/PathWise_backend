@@ -9,7 +9,7 @@ class AuthTests(TestCase):
     def setUp(self):
         self.client = APIClient()
 
-    @patch("accounts.views.is_valid_recaptcha", return_value=True)
+    @patch("accounts.views.auth.is_valid_recaptcha", return_value=True)
     def test_student_registration(self, mock_recaptcha):
         response = self.client.post(
             "/api/auth/register/",
@@ -29,7 +29,8 @@ class AuthTests(TestCase):
         # check status code is 200
         # check OTP email was sent
 
-    def test_password_mismatch(self):
+    @patch("accounts.views.auth.is_valid_recaptcha", return_value=True)
+    def test_password_mismatch(self, mock_recaptcha):
         response = self.client.post(
             "/api/auth/register/",
             {
