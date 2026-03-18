@@ -1,1 +1,8 @@
 .env
+*.pyc
+__pycache__/
+
+venv/
+certificates/
+pending_certificates/
+media/

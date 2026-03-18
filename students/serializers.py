@@ -4,10 +4,40 @@ from .models import StudentProfile
 
 
 class StudentProfileSerializer(serializers.ModelSerializer):
+
+    email = serializers.EmailField(source="user.email", read_only=True)
+
     class Meta:
         model = StudentProfile
-        fields = "__all__"
-        read_only_fields = ("id", "user", "created_at", "updated_at")
+        fields = [
+            "id",
+            "email",  # the extra field you added
+            "full_name",
+            "date_of_birth",
+            "gender",
+            "phone",
+            "profile_photo",
+            "city",
+            "state",
+            "education_level",
+            "stream",
+            "is_onboarded",
+            "assessment_taken",
+            "roadmap_created",
+            "profile_completed",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = (
+            "id",
+            "user",
+            "created_at",
+            "updated_at",
+            "is_onboarded",
+            "assessment_taken",
+            "roadmap_created",
+            "profile_completed",
+        )
 
 
 def create_student_profile(user):

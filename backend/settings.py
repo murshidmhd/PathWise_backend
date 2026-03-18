@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "students",
     "counselors",
+    "assessments",
 ]
 
 MIDDLEWARE = [
@@ -206,7 +207,7 @@ SESSION_COOKIE_SECURE = env_bool("SESSION_COOKIE_SECURE", False)
 from datetime import timedelta
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(seconds=10),  # Short-lived access token
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=1),  # Short-lived access token
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),  # Adjust this 👈
     "ROTATE_REFRESH_TOKENS": False,  # Set True to issue a new refresh token on each use
     "BLACKLIST_AFTER_ROTATION": True,  # Requires 'rest_framework_simplejwt.token_blacklist' in INSTALLED_APPS
