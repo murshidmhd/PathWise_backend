@@ -17,13 +17,13 @@ RIASEC_LABELS = {
     "C": "Conventional",
 }
 
-CAREER_RECOMMENDATIONS = {
-    "R": ["Mechanical Engineer", "Architect", "Technician"],
-    "I": ["Data Analyst", "Scientist", "Researcher"],
-    "A": ["Graphic Designer", "Writer", "Content Creator"],
+CAREER_SUGGESTIONS = {
+    "R": ["Mechanical Engineer", "Civil Engineer", "Architecture"],
+    "I": ["Data Scientist", "Doctor", "Research Analyst"],
+    "A": ["Graphic Designer", "Writer", "Animator"],
     "S": ["Teacher", "Psychologist", "Counselor"],
-    "E": ["Entrepreneur", "Sales Manager", "Business Development Executive"],
-    "C": ["Accountant", "Banking Professional", "Operations Executive"],
+    "E": ["Entrepreneur", "Marketing Manager", "Sales Lead"],
+    "C": ["Accountant", "Banking Professional", "Operations Analyst"],
 }
 
 STRENGTH_MAP = {
@@ -31,17 +31,17 @@ STRENGTH_MAP = {
     "I": "analytical thinking",
     "A": "creative expression",
     "S": "helping and collaboration",
-    "E": "leadership and persuasion",
-    "C": "organization and accuracy",
+    "E": "leadership and communication",
+    "C": "organization and structure",
 }
 
 WEAKNESS_MAP = {
-    "R": "abstract discussion",
-    "I": "fast social decision-making",
-    "A": "highly repetitive work",
-    "S": "competitive pressure",
-    "E": "routine-heavy tasks",
-    "C": "ambiguous environments",
+    "R": "abstract-only work",
+    "I": "fast social situations",
+    "A": "very repetitive tasks",
+    "S": "high-pressure competition",
+    "E": "routine-heavy workflows",
+    "C": "unclear or chaotic environments",
 }
 
 
@@ -60,35 +60,40 @@ def _get_student_profile(user):
         raise ServiceError("Student profile not found.", status_code=404) from exc
 
 
-def _build_report_payload(type_counts):
-    if not type_counts:
+def _build_report_data(personality_counts, interest_counts):
+    if not personality_counts:
         return {
             "personality_type": None,
             "interest_areas": [],
             "recommended_careers": [],
             "strengths": [],
             "weaknesses": [],
-            "report_text": "No assessment insights are available yet.",
+            "report_text": "Assessment completed successfully.",
         }
 
-    ranked_types = [code for code, _ in type_counts.most_common(3)]
-    primary_type = ranked_types[0]
-    interest_areas = [RIASEC_LABELS[code] for code in ranked_types]
+    top_personality_codes = [
+        code for code, _count in personality_counts.most_common(3)
+    ]
+    personality_labels = [RIASEC_LABELS[code] for code in top_personality_codes]
+    primary_code = top_personality_codes[0]
+
     recommended_careers = []
-    for code in ranked_types:
-        recommended_careers.extend(CAREER_RECOMMENDATIONS.get(code, []))
+    for code in top_personality_codes:
+        recommended_careers.extend(CAREER_SUGGESTIONS.get(code, []))
+
+    interest_areas = [
+        area for area, _count in interest_counts.most_common(3)
+    ] if interest_counts else []
 
     return {
-        "personality_type": RIASEC_LABELS[primary_type],
+        "personality_type": RIASEC_LABELS[primary_code],
         "interest_areas": interest_areas,
         "recommended_careers": recommended_careers[:6],
-        "strengths": [STRENGTH_MAP[code] for code in ranked_types],
-        "weaknesses": [WEAKNESS_MAP[code] for code in ranked_types],
+        "strengths": [STRENGTH_MAP[code] for code in top_personality_codes],
+        "weaknesses": [WEAKNESS_MAP[code] for code in top_personality_codes],
         "report_text": (
-            f"Your strongest assessment trend is {RIASEC_LABELS[primary_type]}. "
-            f"You also showed alignment with {', '.join(interest_areas[1:])}."
-            if len(interest_areas) > 1
-            else f"Your strongest assessment trend is {RIASEC_LABELS[primary_type]}."
+            f"Your strongest personality trend is {RIASEC_LABELS[primary_code]}. "
+            f"Top interests: {', '.join(interest_areas) if interest_areas else 'Not enough data'}."
         ),
     }
 
@@ -99,20 +104,27 @@ def list_questions():
 
 def start_assessment(user):
     student = _get_student_profile(user)
+    existing = Assessment.objects.filter(student=student).first()
 
-    existing_assessment = Assessment.objects.filter(
+    if existing and existing.status == "started":
+        return existing, False
+
+    if existing and existing.status == "completed":
+        raise ServiceError(
+            {
+                "message": "Assessment already completed.",
+                "assessment_id": existing.id,
+                "status": existing.status,
+            },
+            status_code=409,
+        )
+
+    assessment = Assessment.objects.create(
         student=student,
         status="started",
-    ).first()
-    if existing_assessment:
-        return existing_assessment
-
-    attempt_number = Assessment.objects.filter(student=student).count() + 1
-    return Assessment.objects.create(
-        student=student,
-        status="started",
-        attempt_number=attempt_number,
+        attempt_number=1,
     )
+    return assessment, True
 
 
 @transaction.atomic
@@ -135,10 +147,11 @@ def submit_assessment(user, assessment_id, answers, time_taken=None):
     if not answers:
         raise ServiceError("At least one answer is required.")
 
-    question_ids = [item["question_id"] for item in answers]
+    question_ids = [answer["question_id"] for answer in answers]
     if len(question_ids) != len(set(question_ids)):
         raise ServiceError("Duplicate question answers are not allowed.")
 
+<<<<<<< HEAD
     questions = Question.objects.in_bulk(question_ids)
     # so basically the in_bulck is a method i used bucause it return a dictionary with the
 
@@ -153,32 +166,57 @@ def submit_assessment(user, assessment_id, answers, time_taken=None):
         question_id for question_id in question_ids if question_id not in questions
     ]
     if missing_ids:
+=======
+    required_question_ids = list(Question.objects.values_list("id", flat=True))
+    missing_required_question_ids = [
+        question_id
+        for question_id in required_question_ids
+        if question_id not in set(question_ids)
+    ]
+    if missing_required_question_ids:
+>>>>>>> backup/current-wip-split
         raise ServiceError(
-            {"message": "Some questions were not found.", "question_ids": missing_ids}
+            {
+                "message": "All assessment questions must be answered before submission.",
+                "question_ids": missing_required_question_ids,
+            }
+        )
+
+    questions = Question.objects.in_bulk(question_ids)
+    missing_question_ids = [
+        question_id for question_id in question_ids if question_id not in questions
+    ]
+    if missing_question_ids:
+        raise ServiceError(
+            {
+                "message": "Some questions were not found.",
+                "question_ids": missing_question_ids,
+            }
         )
 
     aptitude_score = 0
-    personality_score = 0
-    interest_score = 0
-    type_counts = Counter()
+    personality_counts = Counter()
+    interest_counts = Counter()
 
-    for item in answers:
-        question = questions[item["question_id"]]
-        selected_answer = item["selected_answer"]
-
+    for answer in answers:
+        question = questions[answer["question_id"]]
+        selected_answer = answer["selected_answer"]
         is_correct = None
+
         if question.section == "aptitude":
             is_correct = selected_answer == question.correct_answer
             if is_correct:
                 aptitude_score += question.marks
-        elif question.section == "personality":
-            personality_score += 1
-        elif question.section == "interest":
-            interest_score += 1
 
-        selected_type = getattr(question, f"option_{selected_answer}_type", None)
-        if selected_type:
-            type_counts[selected_type] += 1
+        elif question.section == "personality":
+            riasec_type = getattr(question, f"option_{selected_answer}_type", None)
+            if riasec_type:
+                personality_counts[riasec_type] += 1
+
+        elif question.section == "interest":
+            interest_area = question.sub_section
+            if interest_area:
+                interest_counts[interest_area] += 1
 
         AssessmentAnswer.objects.update_or_create(
             assessment=assessment,
@@ -189,22 +227,22 @@ def submit_assessment(user, assessment_id, answers, time_taken=None):
             },
         )
 
-    total_score = aptitude_score + personality_score + interest_score
-    assessment.status = "completed"
+    report_data = _build_report_data(personality_counts, interest_counts)
+
     assessment.aptitude_score = aptitude_score
-    assessment.personality_score = personality_score
-    assessment.interest_score = interest_score
-    assessment.total_score = total_score
+    assessment.personality_score = sum(personality_counts.values())
+    assessment.interest_score = sum(interest_counts.values())
+    assessment.total_score = aptitude_score
     assessment.time_taken = time_taken
+    assessment.status = "completed"
     assessment.completed_at = timezone.now()
     assessment.save()
 
-    report_payload = _build_report_payload(type_counts)
     AssessmentReport.objects.update_or_create(
         assessment=assessment,
         defaults={
             "student": student,
-            **report_payload,
+            **report_data,
         },
     )
 
@@ -229,6 +267,9 @@ def get_assessment_report(user, assessment_id):
         assessment = Assessment.objects.get(id=assessment_id, student=student)
     except Assessment.DoesNotExist as exc:
         raise ServiceError("Assessment not found.", status_code=404) from exc
+
+    if assessment.status != "completed":
+        raise ServiceError("Assessment report is only available after completion.")
 
     try:
         return assessment.report

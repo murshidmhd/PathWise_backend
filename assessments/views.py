@@ -36,11 +36,12 @@ class StartAssessmentView(APIView):
         serializer.is_valid(raise_exception=True)
 
         try:
-            assessment = start_assessment(request.user)
+            assessment, created = start_assessment(request.user)
         except ServiceError as exc:
             return Response(exc.detail, status=exc.status_code)
 
-        return Response(AssessmentSerializer(assessment).data, status=201)
+        status_code = 201 if created else 200
+        return Response(AssessmentSerializer(assessment).data, status=status_code)
 
 
 class SubmitAssessmentView(APIView):

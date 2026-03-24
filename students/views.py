@@ -23,7 +23,7 @@ class StudentProfileView(APIView):
 
         except StudentProfile.DoesNotExist:
             return Response({"detail": "Profile not found."}, status=404)
-
+ 
         serializer = StudentProfileSerializer(profile)
         return Response(serializer.data)
 
