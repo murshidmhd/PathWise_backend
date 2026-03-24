@@ -1,8 +1,11 @@
 from collections import Counter
 
+import google.generativeai as genai
+from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
+from backend.settings import GEMINI_API_KEY
 from students.models import StudentProfile
 
 from .models import Assessment, AssessmentAnswer, AssessmentReport, Question
@@ -43,9 +46,6 @@ WEAKNESS_MAP = {
     "E": "routine-heavy workflows",
     "C": "unclear or chaotic environments",
 }
-import google.generativeai as genai
-from backend import settings
-from backend.settings import GEMINI_API_KEY
 
 
 class ServiceError(Exception):
@@ -63,17 +63,12 @@ def _get_student_profile(user):
         raise ServiceError("Student profile not found.", status_code=404) from exc
 
 
-import google.generativeai as genai
-from django.conf import settings
-
-
 def _generate_report_text(
     personality_type, interest_areas, recommended_careers, strengths, weaknesses
 ):
     try:
         print(GEMINI_API_KEY)
         genai.configure(api_key=GEMINI_API_KEY)
-        # model = genai.GenerativeModel("gemini-3.1-flash-lite-preview")
         model = genai.GenerativeModel("gemini-2.5-flash-lite")
 
         prompt = f"""
@@ -91,8 +86,8 @@ def _generate_report_text(
         print("this is the response text", response.text)
         return response.text
 
-    except Exception as e:
-        print("GEMINI ERROR:", e)  # ← add this
+    except Exception as exc:
+        print("GEMINI ERROR:", exc)
         return (
             f"Your strongest personality trend is {personality_type}. "
             f"Top interests: {', '.join(interest_areas) if interest_areas else 'Not enough data'}."
@@ -111,7 +106,6 @@ def _build_report_data(personality_counts, interest_counts):
         }
 
     top_personality_codes = [code for code, _count in personality_counts.most_common(3)]
-    personality_labels = [RIASEC_LABELS[code] for code in top_personality_codes]
     primary_code = top_personality_codes[0]
 
     recommended_careers = []
@@ -138,9 +132,6 @@ def _build_report_data(personality_counts, interest_counts):
             [WEAKNESS_MAP[code] for code in top_personality_codes],
         ),
     }
-
-
-from django.conf import settings
 
 
 def list_questions():
@@ -180,8 +171,6 @@ def start_assessment(user):
 def submit_assessment(user, assessment_id, answers, time_taken=None):
     student = _get_student_profile(user)
 
-    # select_for_update
-    # this is raw level lock it prevent the double submission
     try:
         assessment = Assessment.objects.select_for_update().get(
             id=assessment_id,
@@ -206,13 +195,13 @@ def submit_assessment(user, assessment_id, answers, time_taken=None):
         for question_id in required_question_ids
         if question_id not in set(question_ids)
     ]
-    # if missing_required_question_ids:
-    #     raise ServiceError(
-    #         {
-    #             "message": "All assessment questions must be answered before submission.",
-    #             "question_ids": missing_required_question_ids,
-    #         }
-    #     )
+    if missing_required_question_ids:
+        raise ServiceError(
+            {
+                "message": "All assessment questions must be answered before submission.",
+                "question_ids": missing_required_question_ids,
+            }
+        )
 
     questions = Question.objects.in_bulk(question_ids)
     missing_question_ids = [
@@ -260,8 +249,6 @@ def submit_assessment(user, assessment_id, answers, time_taken=None):
         )
 
     report_data = _build_report_data(personality_counts, interest_counts)
-
-    print(report_data)
 
     assessment.aptitude_score = aptitude_score
     assessment.personality_score = sum(personality_counts.values())

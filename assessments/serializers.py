@@ -45,7 +45,7 @@ class AssessmentSerializer(serializers.ModelSerializer):
         ]
 
 
-class AssessmentReportSerializer(serializers.ModelSerializer):
+class   AssessmentReportSerializer(serializers.ModelSerializer):
     class Meta:
         model = AssessmentReport
         fields = [
