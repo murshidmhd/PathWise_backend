@@ -119,6 +119,8 @@ def start_assessment(user):
 def submit_assessment(user, assessment_id, answers, time_taken=None):
     student = _get_student_profile(user)
 
+    # select_for_update
+    # this is raw level lock it prevent the double submission
     try:
         assessment = Assessment.objects.select_for_update().get(
             id=assessment_id,
@@ -138,7 +140,18 @@ def submit_assessment(user, assessment_id, answers, time_taken=None):
         raise ServiceError("Duplicate question answers are not allowed.")
 
     questions = Question.objects.in_bulk(question_ids)
-    missing_ids = [question_id for question_id in question_ids if question_id not in questions]
+    # so basically the in_bulck is a method i used bucause it return a dictionary with the
+
+    """{
+        this is the output look so we take simple the the result 
+     1: <Question object>,
+     5: <Question object>,
+     12: <Question object>,
+     }"""
+
+    missing_ids = [
+        question_id for question_id in question_ids if question_id not in questions
+    ]
     if missing_ids:
         raise ServiceError(
             {"message": "Some questions were not found.", "question_ids": missing_ids}
