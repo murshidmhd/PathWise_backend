@@ -1,9 +1,15 @@
+import re
 from rest_framework import serializers
 from .models import User
 
 
-class RegisterSerializer(serializers.ModelSerializer):
+ALLOWED_REGISTRATION_ROLES = [
+    ("student", "Student"),
+    ("counselor", "Counselor"),
+]
 
+
+class RegisterSerializer(serializers.ModelSerializer):
     confirm_password = serializers.CharField(write_only=True)
     # print("SERIALIZER")
 
@@ -14,6 +20,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True,
     )
+    role = serializers.ChoiceField(choices=ALLOWED_REGISTRATION_ROLES)
 
     # print("SERIALIZER")
 
@@ -33,6 +40,21 @@ class RegisterSerializer(serializers.ModelSerializer):
         ]
 
     # print("i am here create")
+
+    def validate_email(self, value):
+        email = value.lower()
+        email_regex = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
+        if not re.match(email_regex, email):
+            raise serializers.ValidationError("Please enter a valid email address.")
+
+        disposable_domains = ["tempmail.com", "10minutemail.com", "throwaway.com"]
+        domain = email.split("@")[1]
+        if domain in disposable_domains:
+            raise serializers.ValidationError(
+                "Disposable email addresses are not allowed."
+            )
+
+        return email
 
     def validate_password(self, value):
         if len(value) < 8:
@@ -62,13 +84,11 @@ class RegisterSerializer(serializers.ModelSerializer):
 
 
 class LoginSerializer(serializers.Serializer):
-
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
 
 
 class UserSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = User
         fields = ["id", "first_name", "last_name", "email", "role"]
@@ -122,4 +142,4 @@ class GoogleAuthSerializer(serializers.Serializer):
 
 class CompleteGoogleRegistrationSerializer(serializers.Serializer):
     temp_token = serializers.CharField()
-    role = serializers.ChoiceField(choices=User.ROLE_CHOICES)
+    role = serializers.ChoiceField(choices=ALLOWED_REGISTRATION_ROLES)
