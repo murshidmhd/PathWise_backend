@@ -17,7 +17,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from students.serializers import create_student_profile
 
 from .models import OTP, User
-from .utils import send_otp_email
+from .tasks import send_otp_email_task
 
 
 class ServiceError(Exception):
@@ -105,7 +105,7 @@ def initiate_registration(validated_data, recaptcha_token):
         )
 
     cache.set(f"pending_registration:{email}", pending_data, timeout=600)
-    send_otp_email(email)
+    send_otp_email_task.delay(email)
 
     return {"message": "OTP sent", "email": email}
 
@@ -123,9 +123,7 @@ def verify_registration_otp(email, otp):
     pending_user = cache.get(f"pending_registration:{email}")
     if not pending_user:
         raise ServiceError(
-            {
-                "message": "OTP expired or registration not found. Please register again."
-            }
+            {"message": "OTP expired or registration not found. Please register again."}
         )
 
     if pending_user.get("email") != email:
@@ -166,7 +164,7 @@ def resend_registration_otp(email):
             }
         )
 
-    send_otp_email(email)
+    send_otp_email_task.delay(email)
     return {"message": "OTP resent successfully", "email": email}
 
 
@@ -189,7 +187,9 @@ def login_user(email, password, recaptcha_token):
         raise ServiceError("Authentication failed")
 
     if authenticated_user.role == "counselor":
-        counselor_profile = CounselorProfile.objects.filter(user=authenticated_user).first()
+        counselor_profile = CounselorProfile.objects.filter(
+            user=authenticated_user
+        ).first()
         approval_status = (
             counselor_profile.approval_status if counselor_profile else "pending"
         )
@@ -331,7 +331,7 @@ def send_password_reset_otp(email):
     if not User.objects.filter(email=email).exists():
         raise ServiceError("No account found with this email.")
 
-    send_otp_email(email)
+    send_otp_email_task.delay(email)
     return {"message": "Password reset OTP sent successfully."}
 
 

@@ -43,6 +43,9 @@ WEAKNESS_MAP = {
     "E": "routine-heavy workflows",
     "C": "unclear or chaotic environments",
 }
+import google.generativeai as genai
+from backend import settings
+from backend.settings import GEMINI_API_KEY
 
 
 class ServiceError(Exception):
@@ -60,6 +63,42 @@ def _get_student_profile(user):
         raise ServiceError("Student profile not found.", status_code=404) from exc
 
 
+import google.generativeai as genai
+from django.conf import settings
+
+
+def _generate_report_text(
+    personality_type, interest_areas, recommended_careers, strengths, weaknesses
+):
+    try:
+        print(GEMINI_API_KEY)
+        genai.configure(api_key=GEMINI_API_KEY)
+        # model = genai.GenerativeModel("gemini-3.1-flash-lite-preview")
+        model = genai.GenerativeModel("gemini-2.5-flash-lite")
+
+        prompt = f"""
+        You are a career counselor for Indian students aged 15-25.
+        Write a short, encouraging career guidance report (3-4 sentences) based on:
+        - Personality type: {personality_type}
+        - Top interests: {', '.join(interest_areas)}
+        - Recommended careers: {', '.join(recommended_careers)}
+        - Strengths: {', '.join(strengths)}
+        - Weaknesses: {', '.join(weaknesses)}
+        Write in simple English. Be positive and motivating.
+        """
+
+        response = model.generate_content(prompt)
+        print("this is the response text", response.text)
+        return response.text
+
+    except Exception as e:
+        print("GEMINI ERROR:", e)  # ← add this
+        return (
+            f"Your strongest personality trend is {personality_type}. "
+            f"Top interests: {', '.join(interest_areas) if interest_areas else 'Not enough data'}."
+        )
+
+
 def _build_report_data(personality_counts, interest_counts):
     if not personality_counts:
         return {
@@ -71,9 +110,7 @@ def _build_report_data(personality_counts, interest_counts):
             "report_text": "Assessment completed successfully.",
         }
 
-    top_personality_codes = [
-        code for code, _count in personality_counts.most_common(3)
-    ]
+    top_personality_codes = [code for code, _count in personality_counts.most_common(3)]
     personality_labels = [RIASEC_LABELS[code] for code in top_personality_codes]
     primary_code = top_personality_codes[0]
 
@@ -81,9 +118,11 @@ def _build_report_data(personality_counts, interest_counts):
     for code in top_personality_codes:
         recommended_careers.extend(CAREER_SUGGESTIONS.get(code, []))
 
-    interest_areas = [
-        area for area, _count in interest_counts.most_common(3)
-    ] if interest_counts else []
+    interest_areas = (
+        [area for area, _count in interest_counts.most_common(3)]
+        if interest_counts
+        else []
+    )
 
     return {
         "personality_type": RIASEC_LABELS[primary_code],
@@ -91,15 +130,25 @@ def _build_report_data(personality_counts, interest_counts):
         "recommended_careers": recommended_careers[:6],
         "strengths": [STRENGTH_MAP[code] for code in top_personality_codes],
         "weaknesses": [WEAKNESS_MAP[code] for code in top_personality_codes],
-        "report_text": (
-            f"Your strongest personality trend is {RIASEC_LABELS[primary_code]}. "
-            f"Top interests: {', '.join(interest_areas) if interest_areas else 'Not enough data'}."
+        "report_text": _generate_report_text(
+            RIASEC_LABELS[primary_code],
+            interest_areas,
+            recommended_careers[:6],
+            [STRENGTH_MAP[code] for code in top_personality_codes],
+            [WEAKNESS_MAP[code] for code in top_personality_codes],
         ),
     }
 
 
+from django.conf import settings
+
+
 def list_questions():
-    return Question.objects.all()
+    count = settings.ASSESSMENT_QUESTIONS_PER_SECTION
+    aptitude = Question.objects.filter(section="aptitude").order_by("?")[:count]
+    personality = Question.objects.filter(section="personality").order_by("?")[:count]
+    interest = Question.objects.filter(section="interest").order_by("?")[:count]
+    return list(aptitude) + list(personality) + list(interest)
 
 
 def start_assessment(user):
@@ -151,36 +200,19 @@ def submit_assessment(user, assessment_id, answers, time_taken=None):
     if len(question_ids) != len(set(question_ids)):
         raise ServiceError("Duplicate question answers are not allowed.")
 
-<<<<<<< HEAD
-    questions = Question.objects.in_bulk(question_ids)
-    # so basically the in_bulck is a method i used bucause it return a dictionary with the
-
-    """{
-        this is the output look so we take simple the the result 
-     1: <Question object>,
-     5: <Question object>,
-     12: <Question object>,
-     }"""
-
-    missing_ids = [
-        question_id for question_id in question_ids if question_id not in questions
-    ]
-    if missing_ids:
-=======
     required_question_ids = list(Question.objects.values_list("id", flat=True))
     missing_required_question_ids = [
         question_id
         for question_id in required_question_ids
         if question_id not in set(question_ids)
     ]
-    if missing_required_question_ids:
->>>>>>> backup/current-wip-split
-        raise ServiceError(
-            {
-                "message": "All assessment questions must be answered before submission.",
-                "question_ids": missing_required_question_ids,
-            }
-        )
+    # if missing_required_question_ids:
+    #     raise ServiceError(
+    #         {
+    #             "message": "All assessment questions must be answered before submission.",
+    #             "question_ids": missing_required_question_ids,
+    #         }
+    #     )
 
     questions = Question.objects.in_bulk(question_ids)
     missing_question_ids = [
@@ -228,6 +260,8 @@ def submit_assessment(user, assessment_id, answers, time_taken=None):
         )
 
     report_data = _build_report_data(personality_counts, interest_counts)
+
+    print(report_data)
 
     assessment.aptitude_score = aptitude_score
     assessment.personality_score = sum(personality_counts.values())

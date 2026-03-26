@@ -62,9 +62,11 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt.token_blacklist",
     "drf_spectacular",
     "corsheaders",
+    "admin_dashboard",
     "students",
     "counselors",
     "assessments",
+    "roadmap",
 ]
 
 MIDDLEWARE = [
@@ -211,4 +213,26 @@ SIMPLE_JWT = {
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),  # Adjust this 👈
     "ROTATE_REFRESH_TOKENS": False,  # Set True to issue a new refresh token on each use
     "BLACKLIST_AFTER_ROTATION": True,  # Requires 'rest_framework_simplejwt.token_blacklist' in INSTALLED_APPS
+}
+
+
+# settings.py
+ASSESSMENT_QUESTIONS_PER_SECTION = 1  # change to 10 for production
+
+
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+# Celery settings
+CELERY_BROKER_URL = "redis://127.0.0.1:6379/0"
+CELERY_RESULT_BACKEND = "redis://127.0.0.1:6379/0"
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = TIME_ZONE
+
+CELERY_BEAT_SCHEDULE = {
+    "cleanup-pending-certificates-every-15-mins": {
+        "task": "accounts.tasks.cleanup_pending_certificates",
+        "schedule": 900.0,  # Run every 15 minutes
+    },
 }
