@@ -54,6 +54,11 @@ class RegisterSerializer(serializers.ModelSerializer):
                 "Disposable email addresses are not allowed."
             )
 
+        if not email.endswith("@gmail.com"):
+            raise serializers.ValidationError(
+                "Only @gmail.com email addresses are allowed."
+            )
+
         return email
 
     def validate_password(self, value):
