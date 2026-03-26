@@ -5,3 +5,4 @@ venv/
 certificates/
 pending_certificates/
 media/
+celerybeat-schedule
