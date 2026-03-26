@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from students.models import StudentProfile
+
 from .models import CounselorProfile
 
 
@@ -60,3 +62,52 @@ def create_counselor_profile(
         certificate_url=certificate_url,
         approval_status="pending",
     )
+
+
+class CounselorStudentListSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(source="user.email", read_only=True)
+
+    class Meta:
+        model = StudentProfile
+        fields = [
+            "id",
+            "full_name",
+            "email",
+            "phone",
+            "city",
+            "state",
+            "education_level",
+            "stream",
+            "assessment_taken",
+            "roadmap_created",
+            "profile_completed",
+            "created_at",
+        ]
+
+
+class CounselorStudentDetailSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(source="user.email", read_only=True)
+    assigned_counselor = serializers.PrimaryKeyRelatedField(read_only=True)
+
+    class Meta:
+        model = StudentProfile
+        fields = [
+            "id",
+            "email",
+            "full_name",
+            "date_of_birth",
+            "gender",
+            "phone",
+            "profile_photo",
+            "city",
+            "state",
+            "education_level",
+            "stream",
+            "is_onboarded",
+            "assessment_taken",
+            "roadmap_created",
+            "profile_completed",
+            "assigned_counselor",
+            "created_at",
+            "updated_at",
+        ]
