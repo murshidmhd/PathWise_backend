@@ -1,5 +1,5 @@
-from django.db import models
 from django.conf import settings
+from django.db import models
 
 
 class StudentProfile(models.Model):
@@ -31,6 +31,13 @@ class StudentProfile(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="student_profile",
+    )
+    assigned_counselor = models.ForeignKey(
+        "counselors.CounselorProfile",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="assigned_students",
     )
     full_name = models.CharField(max_length=255)
     date_of_birth = models.DateField(null=True, blank=True)

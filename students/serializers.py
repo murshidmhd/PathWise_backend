@@ -4,8 +4,27 @@ from .models import StudentProfile
 
 
 class StudentProfileSerializer(serializers.ModelSerializer):
-
     email = serializers.EmailField(source="user.email", read_only=True)
+    counselor_details = serializers.SerializerMethodField()
+
+    def get_counselor_details(self, obj):
+        if not obj.assigned_counselor:
+            return None
+        c = obj.assigned_counselor
+        return {
+            "id": c.id,
+            "full_name": c.full_name,
+            "phone": c.phone,
+            "city": c.city,
+            "state": c.state,
+            "experience_years": c.experience_years,
+            "qualification": c.qualification,
+            "specialization": c.specialization,
+            "bio": c.bio,
+            "rating": str(c.rating),
+            "profile_photo": c.profile_photo,
+            "is_available": c.is_available,
+        }
 
     class Meta:
         model = StudentProfile
@@ -25,6 +44,7 @@ class StudentProfileSerializer(serializers.ModelSerializer):
             "assessment_taken",
             "roadmap_created",
             "profile_completed",
+            "counselor_details",
             "created_at",
             "updated_at",
         ]
@@ -38,6 +58,17 @@ class StudentProfileSerializer(serializers.ModelSerializer):
             "roadmap_created",
             "profile_completed",
         )
+
+        def get_counselor_details(self, obj):
+            if obj.assigned_counselor:
+                return {
+                    "id": obj.assigned_counselor.id,
+                    "name": obj.assigned_counselor.full_name,
+                    "email": obj.assigned_counselor.user.email,
+                    "phone": obj.assigned_counselor.phone,
+                    "profile_photo": obj.assigned_counselor.profile_photo,
+                }
+            return None
 
 
 def create_student_profile(user):
