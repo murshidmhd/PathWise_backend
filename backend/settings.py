@@ -217,7 +217,7 @@ SIMPLE_JWT = {
 
 
 # settings.py
-ASSESSMENT_QUESTIONS_PER_SECTION = 1  # change to 10 for production
+ASSESSMENT_QUESTIONS_PER_SECTION = 5  # change to 10 for production
 
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")

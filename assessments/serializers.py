@@ -23,10 +23,6 @@ class AssessmentAnswerInputSerializer(serializers.Serializer):
     selected_answer = serializers.ChoiceField(choices=["a", "b", "c", "d"])
 
 
-class StartAssessmentSerializer(serializers.Serializer):
-    pass
-
-
 class SubmitAssessmentSerializer(serializers.Serializer):
     answers = AssessmentAnswerInputSerializer(many=True)
     time_taken = serializers.IntegerField(required=False, min_value=0)
@@ -49,7 +45,7 @@ class AssessmentSerializer(serializers.ModelSerializer):
         ]
 
 
-class   AssessmentReportSerializer(serializers.ModelSerializer):
+class AssessmentReportSerializer(serializers.ModelSerializer):
     class Meta:
         model = AssessmentReport
         fields = [

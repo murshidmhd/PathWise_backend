@@ -6,7 +6,6 @@ from .serializers import (
     AssessmentReportSerializer,
     AssessmentSerializer,
     QuestionSerializer,
-    StartAssessmentSerializer,
     SubmitAssessmentSerializer,
 )
 from .services import (
@@ -32,9 +31,6 @@ class StartAssessmentView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        serializer = StartAssessmentSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
         try:
             assessment, created = start_assessment(request.user)
         except ServiceError as exc:
