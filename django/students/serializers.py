@@ -5,6 +5,7 @@ from .models import StudentProfile
 
 class StudentProfileSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(source="user.email", read_only=True)
+    user_id = serializers.IntegerField(source="user.id", read_only=True)
     counselor_details = serializers.SerializerMethodField()
 
     def get_counselor_details(self, obj):
@@ -13,6 +14,7 @@ class StudentProfileSerializer(serializers.ModelSerializer):
         c = obj.assigned_counselor
         return {
             "id": c.id,
+            "user_id": c.user.id,
             "full_name": c.full_name,
             "phone": c.phone,
             "city": c.city,
@@ -30,6 +32,7 @@ class StudentProfileSerializer(serializers.ModelSerializer):
         model = StudentProfile
         fields = [
             "id",
+            "user_id",
             "email",  # the extra field you added
             "full_name",
             "date_of_birth",
@@ -58,17 +61,6 @@ class StudentProfileSerializer(serializers.ModelSerializer):
             "roadmap_created",
             "profile_completed",
         )
-
-        def get_counselor_details(self, obj):
-            if obj.assigned_counselor:
-                return {
-                    "id": obj.assigned_counselor.id,
-                    "name": obj.assigned_counselor.full_name,
-                    "email": obj.assigned_counselor.user.email,
-                    "phone": obj.assigned_counselor.phone,
-                    "profile_photo": obj.assigned_counselor.profile_photo,
-                }
-            return None
 
 
 def create_student_profile(user):

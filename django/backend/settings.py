@@ -222,13 +222,27 @@ ASSESSMENT_QUESTIONS_PER_SECTION = 5  # change to 10 for production
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
+
+# Use the environment variable 'REDIS_URL', or default to localhost if not found
+REDIS_URL = os.environ.get("REDIS_URL", "redis://127.0.0.1:6379/0")
+
+CELERY_BROKER_URL = REDIS_URL
+CELERY_RESULT_BACKEND = REDIS_URL
+
 # Celery settings
-CELERY_BROKER_URL = "redis://127.0.0.1:6379/0"
-CELERY_RESULT_BACKEND = "redis://127.0.0.1:6379/0"
+CELERY_BROKER_URL = "redis://redis:6379/0"
+CELERY_RESULT_BACKEND = "redis://redis:6379/0"
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": REDIS_URL,
+    }
+}
 
 CELERY_BEAT_SCHEDULE = {
     "cleanup-pending-certificates-every-15-mins": {

@@ -16,8 +16,9 @@ from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from students.serializers import create_student_profile
 
-from .models import OTP, User
+from .models import User
 from .tasks import send_otp_email_task
+from .utils import create_otp
 
 
 class ServiceError(Exception):
@@ -84,7 +85,7 @@ def _create_user_from_registration(validated_data):
     return user
 
 
-def initiate_registration(validated_data, recaptcha_token):
+def registration(validated_data, recaptcha_token):
     if not _is_valid_recaptcha(recaptcha_token):
         raise ServiceError({"error": "Invalid reCAPTCHA"})
 
@@ -105,20 +106,16 @@ def initiate_registration(validated_data, recaptcha_token):
         )
 
     cache.set(f"pending_registration:{email}", pending_data, timeout=600)
-    send_otp_email_task.delay(email)
+    otp = create_otp(email)
+    send_otp_email_task.delay(email, otp)
 
     return {"message": "OTP sent", "email": email}
 
 
 def verify_registration_otp(email, otp):
-    try:
-        otp_record = OTP.objects.get(email=email, otp=otp)
-    except OTP.DoesNotExist as exc:
-        raise ServiceError({"message": "Invalid OTP"}) from exc
-
-    if otp_record.is_expired():
-        OTP.objects.filter(email=email, otp=otp).delete()
-        raise ServiceError({"message": "OTP expired"})
+    cached_otp = cache.get(f"otp:{email}")
+    if not cached_otp or cached_otp != otp:
+        raise ServiceError({"message": "Invalid or expired OTP"})
 
     pending_user = cache.get(f"pending_registration:{email}")
     if not pending_user:
@@ -140,7 +137,7 @@ def verify_registration_otp(email, otp):
     user = _create_user_from_registration(pending_user)
     tokens = _issue_tokens(user)
 
-    OTP.objects.filter(email=email, otp=otp).delete()
+    cache.delete(f"otp:{email}")
     cache.delete(f"pending_registration:{email}")
 
     return {
@@ -164,7 +161,8 @@ def resend_registration_otp(email):
             }
         )
 
-    send_otp_email_task.delay(email)
+    otp = create_otp(email)
+    send_otp_email_task.delay(email, otp)
     return {"message": "OTP resent successfully", "email": email}
 
 
@@ -331,19 +329,15 @@ def send_password_reset_otp(email):
     if not User.objects.filter(email=email).exists():
         raise ServiceError("No account found with this email.")
 
-    send_otp_email_task.delay(email)
+    otp = create_otp(email)
+    send_otp_email_task.delay(email, otp)
     return {"message": "Password reset OTP sent successfully."}
 
 
 def reset_password(email, otp, new_password):
-    try:
-        otp_record = OTP.objects.get(email=email, otp=otp)
-    except OTP.DoesNotExist as exc:
-        raise ServiceError({"message": "Invalid OTP"}) from exc
-
-    if otp_record.is_expired():
-        OTP.objects.filter(email=email, otp=otp).delete()
-        raise ServiceError({"message": "OTP expired"})
+    cached_otp = cache.get(f"otp:{email}")
+    if not cached_otp or cached_otp != otp:
+        raise ServiceError({"message": "Invalid or expired OTP"})
 
     user = User.objects.filter(email=email).first()
     if not user:
@@ -351,6 +345,6 @@ def reset_password(email, otp, new_password):
 
     user.set_password(new_password)
     user.save()
-    OTP.objects.filter(email=email, otp=otp).delete()
+    cache.delete(f"otp:{email}")
 
     return {"message": "Password reset successful."}

@@ -6,12 +6,11 @@ from .utils import send_otp_email
 
 
 @shared_task
-def send_otp_email_task(email):
+def send_otp_email_task(email, otp):
     """
     Asynchronously sends the OTP email via Celery.
     """
-    # Call the original sync function
-    send_otp_email(email)
+    send_otp_email(email, otp)
 
 
 @shared_task
