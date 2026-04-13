@@ -195,13 +195,13 @@ def submit_assessment(user, assessment_id, answers, time_taken=None):
         for question_id in required_question_ids
         if question_id not in set(question_ids)
     ]
-    if missing_required_question_ids:
-        raise ServiceError(
-            {
-                "message": "All assessment questions must be answered before submission.",
-                "question_ids": missing_required_question_ids,
-            }
-        )
+    # if missing_required_question_ids:
+    #     raise ServiceError(
+    #         {
+    #             "message": "All assessment questions must be answered before submission.",
+    #             "question_ids": missing_required_question_ids,
+    #         }
+    #     )
 
     questions = Question.objects.in_bulk(question_ids)
     missing_question_ids = [

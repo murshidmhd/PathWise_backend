@@ -1,0 +1,8 @@
+Career: Data Scientist
+RIASEC Type: Investigative (I)
+Description: Data Scientists analyze large datasets to find patterns and help companies make data-driven decisions. They build machine learning models and statistical analysis systems.
+Skills Required: Python, SQL, Machine Learning, Statistics, TensorFlow or PyTorch, Data Visualization, Pandas, NumPy
+Salary India: Entry level 4-8 LPA, Mid level 12-25 LPA, Senior level 30-60 LPA
+Top Companies India: Google, Amazon, Flipkart, Swiggy, TCS, Infosys, startups
+How to Start: Learn Python → Statistics and Math → Machine Learning basics → Build 2-3 projects → Kaggle competitions → Apply
+Relevant for Kerala Students: CDAC Trivandrum, UST Global Kochi, IBS Group hire data scientists. Remote work common.

@@ -30,7 +30,6 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractUser):
-
     ROLE_CHOICES = [
         ("student", "Student"),
         ("counselor", "Counselor"),
@@ -60,19 +59,3 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.email
-
-
-from django.utils import timezone
-
-
-class OTP(models.Model):
-    email = models.EmailField()
-    otp = models.CharField(max_length=6)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def is_expired(self):
-        # OTP expires after 5 minutes
-        return (timezone.now() - self.created_at).seconds > 300
-
-    def __str__(self):
-        return f"{self.email} - {self.otp}"

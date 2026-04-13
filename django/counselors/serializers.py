@@ -7,12 +7,14 @@ from .models import CounselorProfile
 
 class CounselorProfileSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(source="user.email", read_only=True)
+    user_id = serializers.IntegerField(source="user.id", read_only=True)
     certificate_url = serializers.FileField(required=False, allow_null=True)
 
     class Meta:
         model = CounselorProfile
         fields = [
             "id",
+            "user_id",
             "email",
             "full_name",
             "phone",
@@ -66,11 +68,13 @@ def create_counselor_profile(
 
 class CounselorStudentListSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(source="user.email", read_only=True)
+    user_id = serializers.IntegerField(source="user.id", read_only=True)
 
     class Meta:
         model = StudentProfile
         fields = [
             "id",
+            "user_id",
             "full_name",
             "email",
             "phone",

@@ -1,21 +1,21 @@
 import random
 from django.core.mail import send_mail
-from .models import OTP
+from django.core.cache import cache
 
 
 def generate_otp():
-    return str(random.randint(100000, 999999))  
+    return str(random.randint(100000, 999999))
 
-def send_otp_email(email):
+
+def create_otp(email):
     otp = generate_otp()
+    # Store OTP in cache for 5 minutes
     print(otp)
+    cache.set(f"otp:{email}", otp, timeout=300)
+    return otp
 
-    # Delete any old OTPs for this email
-    OTP.objects.filter(email=email).delete()
 
-    # Save new OTP
-    OTP.objects.create(email=email, otp=otp)
-
+def send_otp_email(email, otp):
     # Send email
     send_mail(
         subject="Your OTP Code",
