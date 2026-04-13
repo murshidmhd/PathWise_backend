@@ -54,7 +54,7 @@ class Question(models.Model):
 class Assessment(models.Model):
 
     STATUS_CHOICES = [
-        ('started', 'Started'),
+        ('started', 'Started'), 
         ('completed', 'Completed'),
     ]
 

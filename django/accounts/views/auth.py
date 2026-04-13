@@ -9,7 +9,7 @@ from rest_framework.views import APIView
 from ..serializers import LoginSerializer, RegisterSerializer
 from ..services import (
     ServiceError,
-    initiate_registration,
+    registration,
     login_user,
     logout_user,
     refresh_access_token,
@@ -32,7 +32,7 @@ class RegisterView(APIView):
         try:
             serializer = RegisterSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)
-            result = initiate_registration(
+            result = registration(
                 serializer.validated_data,
                 request.data.get("recaptcha_token"),
             )
