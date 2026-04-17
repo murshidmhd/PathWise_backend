@@ -21,11 +21,7 @@ class GoogleAuthView(APIView):
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "google_auth"
 
-    @extend_schema(
-        tags=["Auth"],
-        request=GoogleAuthSerializer,
-        responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT},
-    )
+    
     def post(self, request):
         serializer = GoogleAuthSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

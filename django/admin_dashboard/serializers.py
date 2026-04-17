@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from counselors.models import CounselorProfile
+from counselors.models import CounselorProfile, CounselorRequest
 from students.models import StudentProfile
 
 
@@ -54,11 +54,13 @@ class AdminCounselorListSerializer(serializers.ModelSerializer):
             "specialization",
             "approval_status",
             "rejection_reason",
+            "rating",
             "is_available",
             "is_active",
             "is_verified",
             "created_at",
         ]
+
 
 class AdminApprovalSerializer(serializers.ModelSerializer):
     email = serializers.CharField(source="user.email", read_only=True)
@@ -74,6 +76,7 @@ class AdminApprovalSerializer(serializers.ModelSerializer):
             "document",
             "created_at",
         ]
+
 
 class RejectSerializer(serializers.Serializer):
     reason = serializers.CharField(required=True)
@@ -120,3 +123,23 @@ class AdminAssignCounselorSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Selected user is not a counselor.")
 
         return counselor
+
+
+class AdminCounselorRequestSerializer(serializers.ModelSerializer):
+    student_name = serializers.CharField(source="student.full_name", read_only=True)
+    counselor_name = serializers.CharField(source="counselor.full_name", read_only=True)
+    student_email = serializers.EmailField(source="student.user.email", read_only=True)
+
+    class Meta:
+        model = CounselorRequest
+        fields = [
+            "id",
+            "student",
+            "student_name",
+            "student_email",
+            "counselor",
+            "counselor_name",
+            "message",
+            "status",
+            "created_at",
+        ]

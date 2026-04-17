@@ -1,8 +1,11 @@
 from django.shortcuts import get_object_or_404
+from rest_framework import status
+from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from counselors.models import CounselorProfile
+from accounts.models import User
+from counselors.models import CounselorProfile, CounselorRequest
 from students.models import StudentProfile
 
 from .permissions import IsAdminUserRole
@@ -10,7 +13,11 @@ from .serializers import (
     AdminAssignCounselorSerializer,
     AdminCounselorListSerializer,
     AdminStudentListSerializer,
+    AdminCounselorRequestSerializer,
+    AdminApprovalSerializer,
+    RejectSerializer,
 )
+from .services import ApprovalService
 
 
 class AdminUserListView(APIView):
@@ -49,23 +56,6 @@ class PendingCounselorApprovalListView(APIView):
         )
 
 
-# views.py
-
-from rest_framework.generics import ListAPIView
-from django.db.models import Q
-from accounts.models import User
-from .serializers import AdminApprovalSerializer
-from .permissions import IsAdminUserRole
-
-
-# views.py
-
-from rest_framework.generics import ListAPIView
-from counselors.models import CounselorProfile
-from .serializers import AdminApprovalSerializer
-from .permissions import IsAdminUserRole
-
-
 class AdminApprovalListView(ListAPIView):
     serializer_class = AdminApprovalSerializer
     permission_classes = [IsAdminUserRole]
@@ -77,17 +67,6 @@ class AdminApprovalListView(ListAPIView):
             .order_by("-id")
         )
 
-
-# views.py
-
-from rest_framework.response import Response
-from rest_framework import status
-
-from counselors.models import CounselorProfile
-from .permissions import IsAdminUserRole
-from .services import ApprovalService
-from .serializers import RejectSerializer
- 
 
 class ApproveCounselorView(APIView):
     permission_classes = [IsAdminUserRole]
@@ -147,3 +126,52 @@ class AdminAssignCounselorView(APIView):
             AdminAssignCounselorSerializer(student).data,
             status=status.HTTP_200_OK,
         )
+
+
+class AdminCounselorRequestListView(APIView):
+    permission_classes = [IsAdminUserRole]
+
+    def get(self, request):
+        status_filter = request.query_params.get("status", "pending")
+        requests = (
+            CounselorRequest.objects.select_related(
+                "student", "counselor", "student__user", "counselor__user"
+            )
+            .filter(status=status_filter)
+            .order_by("-created_at")
+        )
+
+        serializer = AdminCounselorRequestSerializer(requests, many=True)
+        return Response(serializer.data)
+
+
+class AdminCounselorRequestActionView(APIView):
+    permission_classes = [IsAdminUserRole]
+
+    def post(self, request, pk):
+        counselor_request = get_object_or_404(CounselorRequest, pk=pk)
+        action = request.data.get("action")  # "approve" or "reject"
+
+        if action == "approve":
+            # Update student profile
+            student = counselor_request.student
+            student.assigned_counselor = counselor_request.counselor
+            student.save()
+
+            # Update request status
+            counselor_request.status = "approved"
+            counselor_request.save()
+
+            # Reject other pending requests for this student
+            CounselorRequest.objects.filter(student=student, status="pending").exclude(
+                pk=pk
+            ).update(status="rejected")
+
+            return Response({"message": "Request approved and counselor assigned."})
+
+        elif action == "reject":
+            counselor_request.status = "rejected"
+            counselor_request.save()
+            return Response({"message": "Request rejected."})
+
+        return Response({"error": "Invalid action."}, status=400)
