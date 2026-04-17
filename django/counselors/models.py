@@ -38,3 +38,57 @@ class CounselorProfile(models.Model):
 
     def __str__(self):
         return self.user.email
+
+
+class CounselorReview(models.Model):
+    student = models.ForeignKey(
+        "students.StudentProfile",
+        on_delete=models.CASCADE,
+        related_name="counselor_reviews",
+    )
+    counselor = models.ForeignKey(
+        CounselorProfile,
+        on_delete=models.CASCADE,
+        related_name="reviews",
+    )
+    rating = models.IntegerField(choices=[(i, i) for i in range(1, 6)])
+    comment = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("student", "counselor")
+
+    def __str__(self):
+        return f"Review by {self.student.full_name} for {self.counselor.full_name}"
+
+
+class CounselorRequest(models.Model):
+    STATUS_CHOICES = [
+        ("pending", "Pending"),
+        ("approved", "Approved"),
+        ("rejected", "Rejected"),
+    ]
+    student = models.ForeignKey(
+        "students.StudentProfile",
+        on_delete=models.CASCADE,
+        related_name="counselor_requests",
+    )
+    counselor = models.ForeignKey(
+        CounselorProfile,
+        on_delete=models.CASCADE,
+        related_name="student_requests",
+    )
+    message = models.TextField(blank=True, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        # A student can only have one pending request at a time for ANY counselor
+        # Or maybe one pending request per counselor?
+        # Let's go with one pending request per student-counselor pair to be safe,
+        # but we'll enforce "only one pending total" in the view logic.
+        unique_together = ("student", "counselor", "status")
+
+    def __str__(self):
+        return f"Request from {self.student.full_name} to {self.counselor.full_name} ({self.status})"

@@ -4,14 +4,59 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import CounselorProfile
-from .permissions import IsCounselorUserRole
+from .models import CounselorProfile, CounselorReview, CounselorRequest
+from .permissions import IsCounselorUserRole, IsStudentUserRole
+from students.models import StudentProfile
 from .serializers import (
     CounselorProfileSerializer,
+    CounselorReviewSerializer,
     CounselorStudentDetailSerializer,
     CounselorStudentListSerializer,
+    AvailableCounselorSerializer,
+    CounselorRequestSerializer,
 )
-from students.models import StudentProfile
+
+
+class CounselorReviewView(APIView):
+    permission_classes = [IsAuthenticated, IsStudentUserRole]
+
+    def post(self, request, counselor_id):
+        student_profile = get_object_or_404(StudentProfile, user=request.user)
+        counselor_profile = get_object_or_404(CounselorProfile, id=counselor_id)
+
+        # check if student is assigned to this counselor
+        if student_profile.assigned_counselor != counselor_profile:
+            return Response(
+                {"detail": "You can only rate your assigned counselor."}, status=403
+            )
+
+        data = request.data.copy()
+        data["counselor"] = counselor_profile.id
+        data["student"] = student_profile.id
+
+        serializer = CounselorReviewSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save(student=student_profile, counselor=counselor_profile)
+
+            # Recalculate counselor average rating
+            reviews = CounselorReview.objects.filter(counselor=counselor_profile)
+            avg_rating = sum([r.rating for r in reviews]) / len(reviews)
+            counselor_profile.rating = avg_rating
+            counselor_profile.save(update_fields=["rating"])
+
+            return Response(serializer.data, status=201)
+        return Response(serializer.errors, status=400)
+
+
+class CounselorReviewListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, counselor_id):
+        reviews = CounselorReview.objects.filter(counselor_id=counselor_id).order_by(
+            "-created_at"
+        )
+        serializer = CounselorReviewSerializer(reviews, many=True)
+        return Response(serializer.data)
 
 
 class CounselorProfileView(APIView):
@@ -91,4 +136,45 @@ class CounselorAssignedStudentDetailView(APIView):
             )
 
         serializer = CounselorStudentDetailSerializer(student)
+        return Response(serializer.data)
+
+
+class AvailableCounselorListView(ListAPIView):
+    permission_classes = [IsAuthenticated, IsStudentUserRole]
+    serializer_class = AvailableCounselorSerializer
+
+    def get_queryset(self):
+        return CounselorProfile.objects.filter(
+            approval_status="approved", is_available=True
+        ).order_by("-rating")
+
+
+# you want to check this area 
+
+class CounselorRequestView(APIView):
+    permission_classes = [IsAuthenticated, IsStudentUserRole]
+
+    def post(self, request):
+        student_profile = get_object_or_404(StudentProfile, user=request.user)
+
+        # Check if student already has a pending request
+        if CounselorRequest.objects.filter(
+            student=student_profile, status="pending"
+        ).exists():
+            return Response(
+                {"detail": "You already have a pending counselor request."}, status=400
+            )
+
+        serializer = CounselorRequestSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(student=student_profile)
+            return Response(serializer.data, status=201)
+        return Response(serializer.errors, status=400)
+
+    def get(self, request):
+        student_profile = get_object_or_404(StudentProfile, user=request.user)
+        requests = CounselorRequest.objects.filter(student=student_profile).order_by(
+            "-created_at"
+        )
+        serializer = CounselorRequestSerializer(requests, many=True)
         return Response(serializer.data)

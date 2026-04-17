@@ -7,6 +7,8 @@ from .views import (
     AdminAssignCounselorView,
     ApproveCounselorView,
     RejectCounselorView,
+    AdminCounselorRequestListView,
+    AdminCounselorRequestActionView,
 )
 
 
@@ -25,5 +27,15 @@ urlpatterns = [
         "students/<int:student_id>/assign-counselor/",
         AdminAssignCounselorView.as_view(),
         name="admin-assign-counselor",
+    ),
+    path(
+        "counselor-requests/",
+        AdminCounselorRequestListView.as_view(),
+        name="admin-counselor-requests",
+    ),
+    path(
+        "counselor-requests/<int:pk>/action/",
+        AdminCounselorRequestActionView.as_view(),
+        name="admin-counselor-request-action",
     ),
 ]

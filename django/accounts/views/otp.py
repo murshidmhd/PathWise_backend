@@ -15,11 +15,7 @@ class VerifyOTPView(APIView):
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "otp_verify"
 
-    @extend_schema(
-        tags=["Auth"],
-        request=VerifyOTPSerializer,
-        responses={201: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT},
-    )
+
     def post(self, request):
         otp_serializer = VerifyOTPSerializer(data=request.data)
         otp_serializer.is_valid(raise_exception=True)
@@ -49,11 +45,7 @@ class ResendOTPView(APIView):
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "otp_send"
 
-    @extend_schema(
-        tags=["Auth"],
-        request=ResendOTPSerializer,
-        responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT},
-    )
+    
     def post(self, request):
         serializer = ResendOTPSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

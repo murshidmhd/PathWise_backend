@@ -1,9 +1,6 @@
 from django.db import models
 
 # Create your models here.
-
-
-from django.db import models
 from students.models import StudentProfile
 from assessments.models import Assessment
 
@@ -24,6 +21,8 @@ class CareerRoadmap(models.Model):
         Assessment,
         on_delete=models.CASCADE,
         related_name="roadmaps",
+        null=True,
+        blank=True,
     )
     career_title = models.CharField(max_length=255)
     title = models.CharField(max_length=255, null=True, blank=True)
