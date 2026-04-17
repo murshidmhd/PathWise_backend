@@ -169,6 +169,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = "static/"
+MEDIA_URL = "/"
+MEDIA_ROOT = BASE_DIR
 
 
 CORS_ALLOW_CREDENTIALS = True
