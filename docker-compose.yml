@@ -9,7 +9,7 @@ services:
       DB_NAME: career_db
       DB_USER: career_user
       DB_PASSWORD: 786786msyt
-      DB_HOST: db
+      DB_HOST: db1
       DB_PORT: 5432
       REDIS_URL: redis://redis:6379/0
     volumes:
@@ -25,6 +25,8 @@ services:
       POSTGRES_DB: career_db
       POSTGRES_USER: career_user
       POSTGRES_PASSWORD: 786786msyt
+    volumes:
+      - postgres_data1:/var/lib/postgresql/data
     # ports:
     #   - "5432:5432"
 
@@ -32,7 +34,7 @@ services:
     image: redis:7
 
   celery:
-    build: ./django # <--- This tells Docker to look in the django folder
+    build: ./django # 
     command: celery -A backend worker --loglevel=info
     volumes:
       - ./django:/app
@@ -75,6 +77,8 @@ services:
       POSTGRES_DB: career_db2
       POSTGRES_USER: career_user2
       POSTGRES_PASSWORD: 786786msyt2
+    volumes:
+      - postgres_data2:/var/lib/postgresql/data
 
   ai-service:
     build: ./ai-service
@@ -86,3 +90,7 @@ services:
       DEBUG: "True"
       FRONTEND_ORIGIN: http://localhost:5173
       CHROMA_PERSIST_DIR: /app/chroma_db
+
+volumes:
+  postgres_data1:
+  postgres_data2:
