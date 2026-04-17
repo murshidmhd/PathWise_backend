@@ -21,6 +21,6 @@ urlpatterns = [
     path("resend-otp/", ResendOTPView.as_view(), name="resend-otp"),
     path("google/", GoogleAuthView.as_view()),
     path("complete-google-registration/", CompleteGoogleRegistrationView.as_view()),
-    # path("forgot-password/", ForgotPasswordView.as_view(), name="forgot-password"),
-    # path("reset-password/", ResetPasswordView.as_view(), name="reset-password"),
+    path("forgot-password/", ForgotPasswordView.as_view(), name="forgot-password"),
+    path("reset-password/", ResetPasswordView.as_view(), name="reset-password"),
 ]

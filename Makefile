@@ -40,6 +40,12 @@ migrate:
 makemigrations:
 	docker compose exec django python manage.py makemigrations
 
+ws-migrate:
+	docker compose exec websocket python manage.py migrate
+
+ws-makemigrations:
+	docker compose exec websocket python manage.py makemigrations
+
 test:
 	docker compose exec django python manage.py test
 
