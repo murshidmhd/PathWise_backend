@@ -23,11 +23,6 @@ class RegisterView(APIView):
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "otp_send"
 
-    @extend_schema(
-        tags=["Auth"],
-        request={"multipart/form-data": RegisterSerializer},
-        responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT},
-    )
     def post(self, request):
         try:
             serializer = RegisterSerializer(data=request.data)
@@ -47,15 +42,6 @@ class LoginView(APIView):
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "login"
 
-    @extend_schema(
-        tags=["Auth"],
-        request=LoginSerializer,
-        responses={
-            200: OpenApiTypes.OBJECT,
-            400: OpenApiTypes.OBJECT,
-            403: OpenApiTypes.OBJECT,
-        },
-    )
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -84,11 +70,6 @@ class RefreshTokenView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
 
-    @extend_schema(
-        tags=["Auth"],
-        request=None,
-        responses={200: OpenApiTypes.OBJECT, 401: OpenApiTypes.OBJECT},
-    )
     def post(self, request):
         try:
             result = refresh_access_token(request.COOKIES.get("refresh_token"))
@@ -101,11 +82,6 @@ class LogoutView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
 
-    @extend_schema(
-        tags=["Auth"],
-        request=None,
-        responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT},
-    )
     def post(self, request):
         try:
             result = logout_user(request.COOKIES.get("refresh_token"))

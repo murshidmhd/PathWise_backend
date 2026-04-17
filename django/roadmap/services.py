@@ -18,10 +18,14 @@ def _get_student_profile(user):
     try:
         return StudentProfile.objects.get(user=user)
     except StudentProfile.DoesNotExist as exc:
-        raise RoadmapServiceError("Student profile not found.", status_code=404) from exc
+        raise RoadmapServiceError(
+            "Student profile not found.", status_code=404
+        ) from exc
 
 
-def _generate_roadmap_from_gemini(career_title, personality_type, interest_areas, strengths):
+def _generate_roadmap_from_gemini(
+    career_title, personality_type, interest_areas, strengths
+):
     genai.configure(api_key=settings.GEMINI_API_KEY)
     model = genai.GenerativeModel("gemini-2.5-flash-lite")
 
@@ -31,8 +35,8 @@ def _generate_roadmap_from_gemini(career_title, personality_type, interest_areas
 
     Student profile:
     - Personality type: {personality_type}
-    - Interest areas: {', '.join(interest_areas)}
-    - Strengths: {', '.join(strengths)}
+    - Interest areas: {", ".join(interest_areas)}
+    - Strengths: {", ".join(strengths)}
 
     Return ONLY a JSON object with this exact structure, no extra text:
     {{
@@ -63,8 +67,12 @@ def _generate_roadmap_from_gemini(career_title, personality_type, interest_areas
     return json.loads(clean)
 
 
-def generate_roadmap(user, assessment_id):
+def generate_roadmap(user, assessment_id, custom_career_title=None):
     student = _get_student_profile(user)
+
+    CareerRoadmap.objects.filter(student=student, assessment_id=assessment_id).update(
+        status="archived"   
+    )
 
     # check if roadmap already exists
     existing = CareerRoadmap.objects.filter(
@@ -78,15 +86,24 @@ def generate_roadmap(user, assessment_id):
 
     # get assessment report
     try:
-        report = AssessmentReport.objects.get(assessment_id=assessment_id, student=student)
+        report = AssessmentReport.objects.get(
+            assessment_id=assessment_id, student=student
+        )
     except AssessmentReport.DoesNotExist as exc:
-        raise RoadmapServiceError("Assessment report not found.", status_code=404) from exc
+        raise RoadmapServiceError(
+            "Assessment report not found.", status_code=404
+        ) from exc
 
     # get top career
-    if not report.recommended_careers:
-        raise RoadmapServiceError("No recommended careers found in report.")
+    # Use custom title if provided, otherwise fallback to assessment
+    career_title = custom_career_title or (
+        report.recommended_careers[0] if report.recommended_careers else None
+    )
 
-    career_title = report.recommended_careers[0]
+    if not career_title:
+        raise RoadmapServiceError(
+            "Please provide a career title or complete your assessment."
+        )
 
     # generate from gemini
     roadmap_data = _generate_roadmap_from_gemini(
@@ -108,18 +125,20 @@ def generate_roadmap(user, assessment_id):
     # save milestones
     milestones = []
     for m in roadmap_data.get("milestones", []):
-        milestones.append(RoadmapMilestone(
-            roadmap=roadmap,
-            title=m.get("title"),
-            description=m.get("description"),
-            age_range=m.get("age_range"),
-            duration=m.get("duration"),
-            skills_to_learn=m.get("skills_to_learn", []),
-            exams_to_take=m.get("exams_to_take", []),
-            resources=m.get("resources", []),
-            node_position=m.get("node_position"),
-            order_number=m.get("order_number"),
-        ))
+        milestones.append(
+            RoadmapMilestone(
+                roadmap=roadmap,
+                title=m.get("title"),
+                description=m.get("description"),
+                age_range=m.get("age_range"),
+                duration=m.get("duration"),
+                skills_to_learn=m.get("skills_to_learn", []),
+                exams_to_take=m.get("exams_to_take", []),
+                resources=m.get("resources", []),
+                node_position=m.get("node_position"),
+                order_number=m.get("order_number"),
+            )
+        )
     RoadmapMilestone.objects.bulk_create(milestones)
 
     return roadmap
@@ -132,6 +151,7 @@ def get_roadmap(user, assessment_id):
         return CareerRoadmap.objects.prefetch_related("milestones").get(
             student=student,
             assessment_id=assessment_id,
+            status="active",
         )
     except CareerRoadmap.DoesNotExist as exc:
         raise RoadmapServiceError("Roadmap not found.", status_code=404) from exc

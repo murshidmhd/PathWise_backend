@@ -22,6 +22,7 @@ def calculate_profile_completion(profile):
     return int((filled / len(fields)) * 100)
 
 
+
 class StudentProfileView(APIView):
     permission_classes = [IsAuthenticated]
 

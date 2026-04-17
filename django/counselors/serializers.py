@@ -1,8 +1,7 @@
 from rest_framework import serializers
 
 from students.models import StudentProfile
-
-from .models import CounselorProfile
+from .models import CounselorProfile, CounselorReview, CounselorRequest
 
 
 class CounselorProfileSerializer(serializers.ModelSerializer):
@@ -115,3 +114,52 @@ class CounselorStudentDetailSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
+
+
+class CounselorReviewSerializer(serializers.ModelSerializer):
+    student_name = serializers.CharField(source="student.full_name", read_only=True)
+
+    class Meta:
+        model = CounselorReview
+        fields = ["id", "student", "student_name", "rating", "comment", "created_at"]
+        read_only_fields = ["id", "student", "created_at"]
+
+
+class AvailableCounselorSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(source="user.email", read_only=True)
+
+    class Meta:
+        model = CounselorProfile
+        fields = [
+            "id",
+            "full_name",
+            "email",
+            "city",
+            "state",
+            "experience_years",
+            "specialization",
+            "qualification",
+            "bio",
+            "rating",
+            "profile_photo",
+        ]
+
+
+class CounselorRequestSerializer(serializers.ModelSerializer):
+    counselor_name = serializers.CharField(source="counselor.full_name", read_only=True)
+    student_name = serializers.CharField(source="student.full_name", read_only=True)
+
+    class Meta:
+        model = CounselorRequest
+        fields = [
+            "id",
+            "student",
+            "student_name",
+            "counselor",
+            "counselor_name",
+            "message",
+            "status",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "student", "status", "created_at", "updated_at"]
