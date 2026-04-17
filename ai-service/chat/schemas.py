@@ -16,7 +16,8 @@ class ChatRequest(BaseModel):
     message: str
     conversation_history: list[Message] = []
     summary: str = ""
-    user_context: UserContext = UserContext()  # ← this was missing
+    user_context: UserContext = UserContext()
+    session_type: str = "chat"  # "chat" or "assessment"
 
 
 class ChatResponse(BaseModel):
