@@ -1,5 +1,6 @@
 from django.db import models
 
+
 class FCMDevice(models.Model):
     user_id = models.IntegerField()  # store user id directly, no FK
     fcm_token = models.TextField(unique=True)
