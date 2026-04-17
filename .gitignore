@@ -12,3 +12,4 @@ doc_md/
 backup.sql
 *.sqlite3
 chroma_db/
+.codex
