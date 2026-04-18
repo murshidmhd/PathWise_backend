@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from .models import StudentProfile
+from payments.models import Wallet
 
 
 class StudentProfileSerializer(serializers.ModelSerializer):
@@ -28,6 +29,15 @@ class StudentProfileSerializer(serializers.ModelSerializer):
             "is_available": c.is_available,
         }
 
+    wallet = serializers.SerializerMethodField()
+
+    def get_wallet(self, obj):
+        wallet, created = Wallet.objects.get_or_create(user=obj.user)
+        return {
+            "balance": wallet.balance,
+            "is_welcome_gift_claimed": wallet.is_welcome_gift_claimed,
+        }
+
     class Meta:
         model = StudentProfile
         fields = [
@@ -48,6 +58,7 @@ class StudentProfileSerializer(serializers.ModelSerializer):
             "roadmap_created",
             "profile_completed",
             "counselor_details",
+            "wallet",
             "created_at",
             "updated_at",
         ]

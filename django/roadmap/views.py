@@ -6,15 +6,39 @@ from .serializers import CareerRoadmapSerializer
 from .services import RoadmapServiceError, generate_roadmap, get_roadmap
 from django.utils import timezone
 from .models import CareerRoadmap, RoadmapMilestone
+from payments.services import PointService
 
 
 class GenerateRoadmapView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, assessment_id):
+        # Charge 1 SkillPoint
+        success, balance = PointService.spend_points(
+            user=request.user,
+            amount=1,
+            description=f"Generated AI Roadmap for Assessment #{assessment_id}",
+        )
+
+        if not success:
+            return Response(
+                {
+                    "detail": "Insufficient SkillPoints. Please top up your wallet.",
+                    "balance": balance,
+                },
+                status=402,
+            )  # 402 Payment Required
+
         try:
             roadmap = generate_roadmap(request.user, assessment_id)
         except RoadmapServiceError as exc:
+            # Optional: Refund if generation fails
+            PointService.add_points(
+                request.user,
+                1,
+                "REFUND",
+                f"Refund for failed roadmap generation (#{assessment_id})",
+            )
             return Response(exc.detail, status=exc.status_code)
 
         return Response(CareerRoadmapSerializer(roadmap).data, status=201)
@@ -67,7 +91,21 @@ class CustomRoadmapView(APIView):
         if not career_title:
             return Response({"detail": "Career title is required."}, status=400)
 
-            
+        # Charge 1 SkillPoint
+        success, balance = PointService.spend_points(
+            user=request.user,
+            amount=1,
+            description=f"Generated Custom Roadmap: {career_title}",
+        )
+
+        if not success:
+            return Response(
+                {
+                    "detail": "Insufficient SkillPoints. Please top up your wallet.",
+                    "balance": balance,
+                },
+                status=402,
+            )
 
         try:
             roadmap = generate_roadmap(
@@ -76,6 +114,13 @@ class CustomRoadmapView(APIView):
                 custom_career_title=career_title,
             )
         except RoadmapServiceError as exc:
+            # Refund if fails
+            PointService.add_points(
+                request.user,
+                1,
+                "REFUND",
+                f"Refund for failed custom roadmap: {career_title}",
+            )
             return Response(exc.detail, status=exc.status_code)
 
         return Response(CareerRoadmapSerializer(roadmap).data, status=201)
