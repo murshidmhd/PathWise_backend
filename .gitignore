@@ -13,3 +13,4 @@ backup.sql
 *.sqlite3
 chroma_db/
 .codex
+aws/

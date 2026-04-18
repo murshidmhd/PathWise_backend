@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 from .models import CounselorProfile, CounselorReview, CounselorRequest
 from .permissions import IsCounselorUserRole, IsStudentUserRole
 from students.models import StudentProfile
+from payments.services import PointService
 from .serializers import (
     CounselorProfileSerializer,
     CounselorReviewSerializer,
@@ -149,7 +150,8 @@ class AvailableCounselorListView(ListAPIView):
         ).order_by("-rating")
 
 
-# you want to check this area 
+# you want to check this area
+
 
 class CounselorRequestView(APIView):
     permission_classes = [IsAuthenticated, IsStudentUserRole]
@@ -167,6 +169,24 @@ class CounselorRequestView(APIView):
 
         serializer = CounselorRequestSerializer(data=request.data)
         if serializer.is_valid():
+            counselor_name = serializer.validated_data.get("counselor").user.email
+
+            # Charge 10 SkillPoints
+            success, balance = PointService.spend_points(
+                user=request.user,
+                amount=10,
+                description=f"Request for Counselor: {counselor_name}",
+            )
+
+            if not success:
+                return Response(
+                    {
+                        "detail": "Insufficient SkillPoints (10 required). Please top up your wallet.",
+                        "balance": balance,
+                    },
+                    status=402,
+                )
+
             serializer.save(student=student_profile)
             return Response(serializer.data, status=201)
         return Response(serializer.errors, status=400)

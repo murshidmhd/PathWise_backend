@@ -67,6 +67,7 @@ INSTALLED_APPS = [
     "counselors",
     "assessments",
     "roadmap",
+    "payments",
 ]
 
 MIDDLEWARE = [
@@ -252,3 +253,7 @@ CELERY_BEAT_SCHEDULE = {
         "schedule": 900.0,  # Run every 15 minutes
     },
 }
+
+
+RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID")
+RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET")
