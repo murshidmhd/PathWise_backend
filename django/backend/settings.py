@@ -131,6 +131,10 @@ DATABASES = {
         "PASSWORD": os.getenv("DB_PASSWORD", ""),
         "HOST": os.getenv("DB_HOST", "localhost"),
         "PORT": os.getenv("DB_PORT", "5432"),
+        "CONN_MAX_AGE": 600,  # Keeps the connection open for 10 minutes
+        "OPTIONS": {
+            "sslmode": "require",  # This is the secret sauce for AWS RDS
+        },
     }
 }
 
@@ -253,7 +257,6 @@ CELERY_BEAT_SCHEDULE = {
         "schedule": 900.0,  # Run every 15 minutes
     },
 }
-
 
 RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID")
 RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET")

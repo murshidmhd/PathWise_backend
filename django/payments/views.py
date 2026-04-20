@@ -23,9 +23,18 @@ class CreateOrderView(APIView):
     )
     def post(self, request):
         user = request.user
-        # For now, let's say 1 SkillPoint = ₹350
-        amount_rupees = 350
-        points_to_add = 1
+        points_to_add = int(request.data.get("points", 1))
+
+        # Pricing logic:
+        # 10 SP = 350
+        # 35 SP = 999
+        # 100 SP = 2499
+        if points_to_add >= 100:
+            amount_rupees = 2499
+        elif points_to_add >= 35:
+            amount_rupees = 999
+        else:
+            amount_rupees = 350
 
         # Razorpay expects amount in PAISA (Rupees * 100)
         razorpay_order = client.order.create(
@@ -147,4 +156,4 @@ class PointHistoryView(APIView):
 
         wallet, _ = Wallet.objects.get_or_create(user=request.user)
 
-        return Response({"balance": wallet.balance, "history": data})
+        return Response({"balance": wallet.balance, "transactions": data})
