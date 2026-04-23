@@ -167,8 +167,8 @@ def resend_registration_otp(email):
 
 
 def login_user(email, password, recaptcha_token):
-    if not _is_valid_recaptcha(recaptcha_token):
-        raise ServiceError({"error": "Invalid reCAPTCHA"})
+    # if not _is_valid_recaptcha(recaptcha_token):
+    #     raise ServiceError({"error": "Invalid reCAPTCHA"})
 
     user = User.objects.filter(email=email).first()
     if user and user.google_id:
