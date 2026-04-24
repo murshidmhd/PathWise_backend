@@ -19,6 +19,6 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             cd ~/pathwise_backend
-            git pull origin main
+            git pull origin beta
             sudo docker-compose down
             sudo docker-compose up --build -d
