@@ -4,6 +4,8 @@ from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.http import HttpResponse
+from django.db import transaction
+
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -100,43 +102,45 @@ class RazorpayWebhookView(APIView):
         except Exception as e:
             return HttpResponse(status=400)
 
-
 class VerifyPaymentView(APIView):
-    @extend_schema(
-        description="Verify Razorpay payment signature and credit SkillPoints"
-    )
     def post(self, request):
         data = request.data
+        razorpay_order_id = data.get("razorpay_order_id")
+        
         params_dict = {
-            "razorpay_order_id": data.get("razorpay_order_id"),
+            "razorpay_order_id": razorpay_order_id,
             "razorpay_payment_id": data.get("razorpay_payment_id"),
             "razorpay_signature": data.get("razorpay_signature"),
         }
 
         try:
+            # 1. Verify the signature
             client.utility.verify_payment_signature(params_dict)
 
-            txn = PaymentTransaction.objects.get(
-                razorpay_order_id=params_dict["razorpay_order_id"]
-            )
-            if txn.status != "SUCCESS":
-                txn.status = "SUCCESS"
-                txn.razorpay_payment_id = params_dict["razorpay_payment_id"]
-                txn.save()
-
-                PointService.add_points(
-                    user=txn.user,
-                    amount=txn.credits_added,
-                    transaction_type="PURCHASE",
-                    description=f"Manually verified SkillPoints (Order: {txn.razorpay_order_id})",
+            # 2. Use atomic transaction and select_for_update to prevent double-crediting
+            with transaction.atomic():
+                txn = PaymentTransaction.objects.select_for_update().get(
+                    razorpay_order_id=razorpay_order_id
                 )
+                
+                if txn.status != "SUCCESS":
+                    txn.status = "SUCCESS"
+                    txn.razorpay_payment_id = params_dict["razorpay_payment_id"]
+                    txn.save()
 
-            return Response({"status": "Payment Verified"}, status=status.HTTP_200_OK)
-        except Exception:
-            return Response(
-                {"status": "Payment Failed"}, status=status.HTTP_400_BAD_REQUEST
-            )
+                    # Credit the points
+                    PointService.add_points(
+                        user=txn.user,
+                        amount=txn.credits_added,
+                        transaction_type="PURCHASE",
+                        description=f"Verified SkillPoints (Order: {razorpay_order_id})",
+                    )
+                    return Response({"status": "Payment Verified & Points Added"}, status=status.HTTP_200_OK)
+                else:
+                    return Response({"status": "Already Processed"}, status=status.HTTP_200_OK)
 
+        except Exception as e:
+            return Response({"status": "Payment Verification Failed"}, status=status.HTTP_400_BAD_REQUEST)
 
 class PointHistoryView(APIView):
     def get(self, request):
