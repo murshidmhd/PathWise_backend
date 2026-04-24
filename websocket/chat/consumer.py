@@ -4,14 +4,31 @@ import json
 
 class ChatConsumer(AsyncWebsocketConsumer):
 
-    async def connect(self):
-        self.room_id = self.scope["url_route"]["kwargs"]["room_id"]
-        # we crete the
-        self.room_group = f"chat_{self.room_id}"
+    # async def connect(self):
+    #     self.room_id = self.scope["url_route"]["kwargs"]["room_id"]
+    #     # we crete the
+    #     self.room_group = f"chat_{self.room_id}"
 
-        # join the group
-        await self.channel_layer.group_add(self.room_group, self.channel_name)
+    #     # join the group
+    #     await self.channel_layer.group_add(self.room_group, self.channel_name)
+    #     await self.accept()
+
+    async def connect(self):
+        print("--- DEBUG: Connection attempt started ---")
+        self.room_id = self.scope["url_route"]["kwargs"]["room_id"]
+        print(f"DEBUG: Room Name: {self.room_id}")
+
+        # Check if this line is failing
+        try:
+            # room = await get_room_from_db(self.room_name) 
+            print("DEBUG: Room validation passed")
+        except Exception as e:
+            print(f"DEBUG: Room validation failed: {e}")
+            await self.close()
+            return
+
         await self.accept()
+        print("--- DEBUG: Connection ACCEPTED ---")
 
     async def disconnect(self, close_code):
         # leave the group
