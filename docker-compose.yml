@@ -1,72 +1,110 @@
-
 services:
-
+  # --- REVERSE PROXY (NGINX) ---
   nginx:
     image: nginx:alpine
-    volumes:
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
-      - /etc/letsencrypt:/etc/letsencrypt:ro  # <--- ADD THIS LINE
     ports:
       - "80:80"
       - "443:443"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       - django
       - websocket
       - ai-service
     restart: always
 
+  # --- MAIN DJANGO API ---
   django:
-    # in here we build the image but in the case of the db we use aldreay exist one
     build: ./django
+    command: python manage.py runserver 0.0.0.0:8000
     ports:
       - "8000:8000"
-    #environment:
-     # DB_ENGINE: django.db.backends.postgresql
-      #DB_NAME: career_db
-     #DB_USER: career_user
-    # DB_PASSWORD: 786786msyt
-      #DB_HOST: db1
-      #DB_PORT: 5432
-      #REDIS_URL: redis://redis:6379/0
-    #volumes:
-     # - ./django:/app
-    env_file: ./django/.env
-    restart: always
+    env_file:
+      - ./django/.env
+    volumes:
+      - ./django:/app
     depends_on:
       - redis
-
-  redis:
-    image: redis:7
     restart: always
 
+  # --- CELERY WORKER ---
   celery:
     build: ./django
     command: celery -A backend worker --loglevel=info
-    env_file: ./django/.env
-    restart: always
-    depends_on:
-      - redis
+    env_file:
+      - ./django/.env
     volumes:
       - ./django:/app
-      - ./firebase-credentials.json:/app/firebase-credentials.json # And here!
+      - ./firebase-credentials.json:/app/firebase-credentials.json
     working_dir: /app
-  websocket:
-    build: ./websocket
-    ports:
-      - "8001:8001"
-    env_file: ./websocket/.env
-    restart: always
     depends_on:
       - redis
+    restart: always
+
+  # --- CELERY BEAT ---
+  celery-beat:
+    build: ./django
+    command: celery -A backend beat --loglevel=info
+    env_file:
+      - ./django/.env
+    volumes:
+      - ./django:/app
+    depends_on:
+      - redis
+    restart: always
+
+  # --- WEBSOCKET SERVICE (DAPHNE) ---
+  websocket:
+    build: ./websocket
+    command: daphne -b 0.0.0.0 -p 8001 core.asgi:application
+    ports:
+      - "8001:8001"
+    env_file:
+      - ./websocket/.env
     volumes:
       - ./websocket:/app
-      - ./firebase-credentials.json:/app/firebase-credentials.json # Add this line here too!
+      - ./firebase-credentials.json:/app/firebase-credentials.json
     working_dir: /app
-    command: daphne -b 0.0.0.0 -p 8001 core.asgi:application
+    depends_on:
+      - redis
+    restart: always
+
+  # --- AI SERVICE (FASTAPI) ---
   ai-service:
     build: ./ai-service
+    command: uvicorn main:app --host 0.0.0.0 --port 8002
     ports:
       - "8002:8002"
     env_file:
       - ./ai-service/.env
+    volumes:
+      - ./ai-service:/app
     restart: always
+
+  # --- INFRASTRUCTURE ---
+  redis:
+    image: redis:7
+    restart: always
+
+  db1:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: career_db
+      POSTGRES_USER: career_user
+      POSTGRES_PASSWORD: 786786msyt
+    volumes:
+      - postgres_data1:/var/lib/postgresql/data
+
+  db2:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: career_db2
+      POSTGRES_USER: career_user2
+      POSTGRES_PASSWORD: 786786msyt2
+    volumes:
+      - postgres_data2:/var/lib/postgresql/data
+
+volumes:
+  postgres_data1:
+  postgres_data2:

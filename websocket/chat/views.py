@@ -41,7 +41,13 @@ class ChatMessageView(APIView):
         room, created = ChatRoom.objects.get_or_create(room_id=room_id)
         messages = room.messages.all()
         serializer = MessageSerializer(messages, many=True)
-        return Response(serializer.data)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response(
+                {"error": f"Failed to fetch messages: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
 
     def post(self, request, room_id):
         """
