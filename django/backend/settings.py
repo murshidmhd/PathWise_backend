@@ -268,3 +268,10 @@ RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET")
 # This prevents Django from redirecting non-slash URLs, 
 # which often solves the "Redirect not allowed" issue.
 APPEND_SLASH = False
+#SECURE_SSL_REDIRECT = False
+#SESSION_COOKIE_SECURE = False
+#CSRF_COOKIE_SECURE = False
+
+
+CORS_ALLOW_CREDENTIALS = True
+
