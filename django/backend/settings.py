@@ -260,3 +260,11 @@ CELERY_BEAT_SCHEDULE = {
 
 RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID")
 RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET")
+
+
+
+
+
+# This prevents Django from redirecting non-slash URLs, 
+# which often solves the "Redirect not allowed" issue.
+APPEND_SLASH = False
