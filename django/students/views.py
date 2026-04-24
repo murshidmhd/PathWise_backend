@@ -29,11 +29,7 @@ class StudentProfileView(APIView):
     def get(self, request):
 
         print("hey", request.user)
-        try:
-            profile = StudentProfile.objects.get(user=request.user)
-
-        except StudentProfile.DoesNotExist:
-            return Response({"detail": "Profile not found."}, status=404)
+        profile = StudentProfile.objects.get_or_create(user=request.user)[0]
 
         serializer = StudentProfileSerializer(profile)
         return Response(serializer.data)
