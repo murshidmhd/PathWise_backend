@@ -14,3 +14,7 @@ backup.sql
 chroma_db/
 .codex
 aws/
+node_modules/
+.agent/
+.default.con
+# nginx/default.conf
