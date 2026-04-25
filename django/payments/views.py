@@ -1,10 +1,10 @@
-import razorpay
 import json
 from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.http import HttpResponse
 from django.db import transaction
+import razorpay
 
 
 from rest_framework.views import APIView
