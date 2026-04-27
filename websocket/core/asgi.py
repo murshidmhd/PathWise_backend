@@ -28,11 +28,9 @@ from channels.security.websocket import AllowedHostsOriginValidator
 application = ProtocolTypeRouter(
     {
         "http": get_asgi_application(),
-        "websocket": AllowedHostsOriginValidator(
-            AuthMiddlewareStack(
-                URLRouter(
-                    chat_urls + notif_urls
-                )
+        "websocket": AuthMiddlewareStack(
+            URLRouter(
+                chat_urls + notif_urls
             )
         ),
     }
