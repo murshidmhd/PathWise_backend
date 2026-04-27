@@ -23,8 +23,6 @@ from channels.auth import AuthMiddlewareStack
 from notifications.routing import websocket_urlpatterns as notif_urls
 from chat.routing import websocket_urlpatterns as chat_urls
 
-from channels.security.websocket import AllowedHostsOriginValidator
-
 application = ProtocolTypeRouter(
     {
         "http": get_asgi_application(),
