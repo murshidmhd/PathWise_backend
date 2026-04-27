@@ -63,4 +63,31 @@ class StudentProfile(models.Model):
 
     def __str__(self):
         return f"{self.full_name} ({self.user.email})"
-    
+
+
+class UserSkill(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="skills"
+    )
+    name = models.CharField(max_length=100)
+    level = models.IntegerField(default=0)  # 0 to 100
+    category = models.CharField(max_length=100, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.email} - {self.name} ({self.level}%)"
+
+
+class SkillRecommendation(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="skill_recommendations",
+    )
+    skill_name = models.CharField(max_length=100)
+    reason = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.email} - Recommend {self.skill_name}"
+
