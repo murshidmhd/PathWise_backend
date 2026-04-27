@@ -176,6 +176,8 @@ from pathlib import Path
 # Path to your downloaded JSON
 FIREBASE_ACCOUNT_KEY_PATH = os.path.join(BASE_DIR, "firebase-credentials.json")
 
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 
 
 
