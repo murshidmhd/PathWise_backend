@@ -181,14 +181,18 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 
 
+from corsheaders.defaults import default_headers
+
 # 2. Allow the headers your frontend is sending
-CORS_ALLOW_HEADERS = [
+CORS_ALLOW_HEADERS = list(default_headers) + [
     "accept",
     "authorization",
     "content-type",
     "user-agent",
     "x-csrftoken",
     "x-requested-with",
+    "cache-control",
+    "pragma",
 ]
 
 # 3. Allow the OPTIONS method
