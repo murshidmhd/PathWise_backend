@@ -18,3 +18,20 @@ node_modules/
 .agent/
 .default.con
 # nginx/default.conf
+nginx/default.conf.bak
+
+
+# Databases (IMPORTANT)
+ai-service/chroma_db/
+*.sqlite3
+
+
+django/.env
+ai-service/.env
+websocket/.env
+
+# Docker
+.docker/
+
+# OS files
+.DS_Store
