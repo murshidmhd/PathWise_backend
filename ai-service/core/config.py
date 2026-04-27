@@ -5,6 +5,8 @@ from functools import lru_cache
 
 
 class Settings(BaseSettings):
+
+    DATABASE_URL: str
     # ── App ──────────────────────────────────────────────
     APP_NAME: str = "PathWise AI Service"
     DEBUG: bool = False
@@ -29,6 +31,7 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=True,
+        extra="ignore"
     )
 
 

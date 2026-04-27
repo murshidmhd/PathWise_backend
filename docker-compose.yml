@@ -8,6 +8,7 @@ services:
     volumes:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
       - /etc/letsencrypt:/etc/letsencrypt:ro
+      - static_volume:/app/staticfiles # Add this
     depends_on:
       - django
       - websocket
@@ -17,13 +18,14 @@ services:
   # --- MAIN DJANGO API ---
   django:
     build: ./django
-    command: python manage.py runserver 0.0.0.0:8000
+  #  command: python manage.py runserver 0.0.0.0:8000
     ports:
       - "8000:8000"
     env_file:
       - ./django/.env
     volumes:
       - ./django:/app
+      - static_volume:/app/staticfiles # Add this
     depends_on:
       - redis
     restart: always
@@ -87,7 +89,9 @@ services:
     image: redis:7
     restart: always
 
-volumes:
-
   # Add other volumes if needed, but removing postgres volumes
 
+# ... (all your services above)
+
+volumes:
+  static_volume:
