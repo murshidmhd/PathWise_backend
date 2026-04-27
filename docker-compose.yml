@@ -18,7 +18,7 @@ services:
   # --- MAIN DJANGO API ---
   django:
     build: ./django
-  #  command: python manage.py runserver 0.0.0.0:8000
+    #  command: python manage.py runserver 0.0.0.0:8000
     ports:
       - "8000:8000"
     env_file:
@@ -73,7 +73,7 @@ services:
     restart: always
 
   # --- AI SERVICE (FASTAPI) ---
-  ai-service:
+  ai-service: 
     build: ./ai-service
     command: uvicorn main:app --host 0.0.0.0 --port 8002
     ports:
@@ -84,7 +84,7 @@ services:
       - ./ai-service:/app
     restart: always
 
-  # --- INFRASTRUCTURE ---
+  # --- INFRASTRUCTURE --- 
   redis:
     image: redis:7
     restart: always

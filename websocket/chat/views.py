@@ -40,59 +40,74 @@ class ChatMessageView(APIView):
         """
         GET /api/chat/rooms/{room_id}/messages/
         """
-        room = ChatRoom.objects.filter(room_id=room_id).first()
-        if not room:
-            # Return empty list instead of 404 for new chats
-            return Response([], status=status.HTTP_200_OK)
-        
-        messages = room.messages.all()
-        serializer = MessageSerializer(messages, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        try:
+            room_id = room_id.strip("/")
+            room = ChatRoom.objects.filter(room_id=room_id).first()
+            if not room:
+                return Response([], status=status.HTTP_200_OK)
+            
+            messages = room.messages.all()
+            serializer = MessageSerializer(messages, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            print(f"DEBUG: Error in ChatMessageView GET: {e}")
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def post(self, request, room_id):
         """
         POST /api/chat/rooms/{room_id}/messages/
         """
-        room, created = ChatRoom.objects.get_or_create(room_id=room_id)
-        data = request.data
-        sender_id = data.get("sender_id", 0)
-        sender_name = data.get("sender_name", "Unknown")
-        text = data.get("message", "")
+        try:
+            room_id = room_id.strip("/")
+            room, created = ChatRoom.objects.get_or_create(room_id=room_id)
+            data = request.data
+            sender_id = data.get("sender_id", 0)
+            sender_name = data.get("sender_name", "Unknown")
+            text = data.get("message", "")
 
-        message = Message.objects.create(
-            room=room,
-            sender_id=sender_id,
-            sender_name=sender_name,
-            text=text,
-        )
+            print(f"DEBUG: POST Message for {room_id} from {sender_name} ({sender_id})")
 
-        # TRIGGER NOTIFICATION
-        # Parse receiver_id from room_id (e.g., room_S5_C6)
-        match = re.match(r"room_S(\d+)_C(\d+)", room_id)
-        if match:
-            s_id, c_id = map(int, match.groups())
-            receiver_id = c_id if int(sender_id) == s_id else s_id
-
-            send_notification(
-                user_id=receiver_id,
-                title=f"New message from {sender_name}",
-                message=text[:100] + ("..." if len(text) > 100 else ""),
-                data={"room_id": room_id, "type": "chat_message"},
+            message = Message.objects.create(
+                room=room,
+                sender_id=sender_id,
+                sender_name=sender_name,
+                text=text,
             )
 
-        serializer = MessageSerializer(message)
-        
-        # BROADCAST TO WEBSOCKET
-        channel_layer = get_channel_layer()
-        async_to_sync(channel_layer.group_send)(
-            f"chat_{room_id}",
-            {
-                "type": "chat_message",
-                "message": text,
-                "sender_id": sender_id,
-                "sender_initials": sender_name[:2].upper() if sender_name else "??",
-                "timestamp": str(message.timestamp),
-            },
-        )
+            # TRIGGER NOTIFICATION
+            match = re.match(r"room_S(\d+)_C(\d+)", room_id)
+            if match:
+                s_id, c_id = map(int, match.groups())
+                receiver_id = c_id if int(sender_id) == s_id else s_id
+                print(f"DEBUG: Notification to receiver: {receiver_id}")
 
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+                try:
+                    send_notification(
+                        user_id=receiver_id,
+                        title=f"New message from {sender_name}",
+                        message=text[:100] + ("..." if len(text) > 100 else ""),
+                        data={"room_id": room_id, "type": "chat_message"},
+                    )
+                except Exception as n_err:
+                    print(f"DEBUG: Notification failed (non-critical): {n_err}")
+
+            serializer = MessageSerializer(message)
+            
+            # BROADCAST TO WEBSOCKET
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                f"chat_{room_id}",
+                {
+                    "type": "chat_message",
+                    "message": text,
+                    "sender_id": sender_id,
+                    "sender_initials": sender_name[:2].upper() if sender_name else "??",
+                    "timestamp": str(message.timestamp),
+                },
+            )
+
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            print(f"DEBUG: Error in ChatMessageView POST: {e}")
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
