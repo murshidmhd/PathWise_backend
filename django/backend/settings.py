@@ -210,7 +210,7 @@ RECAPTCHA_VERIFY_URL = os.getenv(
 
 
 CORS_ALLOWED_ORIGINS = env_list(
-    "CORS_ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"
+    "CORS_ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173,https://path-wise-frontend.vercel.app"
 )
 
 
