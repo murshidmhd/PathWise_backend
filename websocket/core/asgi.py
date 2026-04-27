@@ -8,28 +8,31 @@ https://docs.djangoproject.com/en/6.0/howto/deployment/asgi/
 """
 
 import os
+import django
 from django.core.asgi import get_asgi_application
+
+# 1. Set the settings first
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
+
+# 2. Initialize Django BEFORE importing any local apps/routing
+django.setup()
+
+# 3. NOW it is safe to import your local routing
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.auth import AuthMiddlewareStack
-# from notifications.routing import websocket_urlpatterns as notif_urls
 from notifications.routing import websocket_urlpatterns as notif_urls
-
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
 from chat.routing import websocket_urlpatterns as chat_urls
+
 application = ProtocolTypeRouter(
     {
         "http": get_asgi_application(),
         "websocket": AuthMiddlewareStack(
             URLRouter(
                 chat_urls + notif_urls
-                # routes will be added here as we build each consumer
-                # just like urls
-                # in here i want to understand some more thigns
             )
         ),
     }
 )
-
 
 # ProtocolTypeRouterRoutes incoming connection to the right handler based on protocol (HTTP or WebSocket)
 

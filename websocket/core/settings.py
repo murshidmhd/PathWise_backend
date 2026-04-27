@@ -32,7 +32,7 @@ DEBUG = os.getenv("DJANGO_DEBUG", "True").strip().lower() in {"1", "true", "yes"
 ALLOWED_HOSTS = [
     host.strip()
     for host in os.getenv(
-        "DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,websocket"
+        "DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,websocket,pathwise.duckdns.org,path-wise-frontend.vercel.app"
     ).split(",")
     if host.strip()
 ]
@@ -156,9 +156,17 @@ CHANNEL_LAYERS = {
 
 
 CORS_ALLOWED_ORIGINS = [
-    "http://127.0.0.1:5173","http://localhost:5173","https://path-wise-frontend.vercel.app"
+    "http://127.0.0.1:5173",
+    "http://localhost:5173",
+    "https://path-wise-frontend.vercel.app",
 ]
 
+
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:5173",
+    "https://pathwise.duckdns.org",
+    "https://path-wise-frontend.vercel.app",
+]
 CORS_ALLOW_CREDENTIALS = True
 
 
@@ -167,3 +175,26 @@ from pathlib import Path
 
 # Path to your downloaded JSON
 FIREBASE_ACCOUNT_KEY_PATH = os.path.join(BASE_DIR, "firebase-credentials.json")
+
+
+
+
+# 2. Allow the headers your frontend is sending
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "authorization",
+    "content-type",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+]
+
+# 3. Allow the OPTIONS method
+CORS_ALLOW_METHODS = [
+    "DELETE",
+    "GET",
+    "OPTIONS",
+    "PATCH",
+    "POST",
+    "PUT",
+]
