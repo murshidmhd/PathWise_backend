@@ -1,7 +1,7 @@
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema, OpenApiResponse, inline_serializer
 from rest_framework import serializers as drf_serializers
-from rest_framework.parsers import FormParser, MultiPartParser
+from rest_framework.parsers import FormParser, MultiPartParser , JSONParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
@@ -20,7 +20,7 @@ from ..services import (
 class RegisterView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
-    parser_classes = [MultiPartParser, FormParser]
+    parser_classes = [JSONParser,MultiPartParser, FormParser]
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "otp_send"
 
