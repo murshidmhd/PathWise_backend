@@ -68,6 +68,7 @@ INSTALLED_APPS = [
     "assessments",
     "roadmap",
     "payments",
+    "storages",
 ]
 
 from corsheaders.defaults import default_headers
@@ -287,3 +288,27 @@ APPEND_SLASH = False
 CORS_ALLOW_CREDENTIALS = True
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+
+# ── AWS S3 Storage ──────────────────────────────────────────────
+# When AWS credentials are set, all FileField uploads go to S3.
+# In local development (no AWS vars), Django falls back to local storage.
+AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
+AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_STORAGE_BUCKET_NAME", "pathwise-uploads")
+AWS_S3_REGION_NAME = os.getenv("AWS_S3_REGION_NAME", "ap-south-1")  # Mumbai
+AWS_S3_FILE_OVERWRITE = False  # Don't overwrite files with same name
+AWS_DEFAULT_ACL = None  # Use bucket's default ACL
+AWS_QUERYSTRING_AUTH = True  # Signed URLs (private files)
+AWS_S3_SIGNATURE_VERSION = "s3v4"
+
+if AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY:
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+
