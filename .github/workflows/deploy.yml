@@ -22,3 +22,5 @@ jobs:
             git pull origin beta
             sudo docker-compose down
             sudo docker-compose up --build -d
+            sleep 10
+            sudo docker-compose restart nginx

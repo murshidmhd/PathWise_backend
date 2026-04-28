@@ -4,14 +4,18 @@ from django.db import models
 class ChatRoom(models.Model):
     """
     Groups messages into a room.
-    In PathWise, room_id often corresponds to a Counselor or a specific session.
+    room_id format: room_S{student_id}_C{counselor_id}
+    We store student_id and counselor_id as integers to allow direct
+    querying without parsing the room_id string.
     """
 
     room_id = models.CharField(max_length=255, unique=True)
+    student_id = models.IntegerField(null=True, blank=True, db_index=True)
+    counselor_id = models.IntegerField(null=True, blank=True, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Room {self.room_id}"
+        return f"Room {self.room_id} (Student: {self.student_id}, Counselor: {self.counselor_id})"
 
 
 class Message(models.Model):

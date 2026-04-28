@@ -59,7 +59,22 @@ class ChatMessageView(APIView):
         """
         try:
             room_id = room_id.strip("/")
-            room, created = ChatRoom.objects.get_or_create(room_id=room_id)
+
+            # Parse student and counselor IDs from room_id (e.g. room_S138_C139)
+            match = re.match(r"room_S(\d+)_C(\d+)", room_id)
+            s_id = int(match.group(1)) if match else None
+            c_id = int(match.group(2)) if match else None
+
+            room, created = ChatRoom.objects.get_or_create(
+                room_id=room_id,
+                defaults={"student_id": s_id, "counselor_id": c_id},
+            )
+            # Backfill fields if room already existed but had no IDs
+            if not created and (room.student_id is None or room.counselor_id is None):
+                room.student_id = s_id
+                room.counselor_id = c_id
+                room.save(update_fields=["student_id", "counselor_id"])
+
             data = request.data
             sender_id = data.get("sender_id", 0)
             sender_name = data.get("sender_name", "Unknown")
@@ -75,11 +90,10 @@ class ChatMessageView(APIView):
             )
 
             # TRIGGER NOTIFICATION
-            match = re.match(r"room_S(\d+)_C(\d+)", room_id)
-            if match:
-                s_id, c_id = map(int, match.groups())
+            if s_id and c_id:
                 receiver_id = c_id if int(sender_id) == s_id else s_id
                 print(f"DEBUG: Notification to receiver: {receiver_id}")
+
 
                 try:
                     send_notification(
