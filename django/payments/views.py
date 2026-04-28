@@ -191,16 +191,17 @@ class PointHistoryView(APIView):
                     name="PointHistoryResponse",
                     fields={
                         "balance": drf_serializers.IntegerField(),
-                        "transactions": inline_serializer(
-                            name="TransactionItem",
-                            many=True,
-                            fields={
-                                "id": drf_serializers.IntegerField(),
-                                "amount": drf_serializers.IntegerField(),
-                                "type": drf_serializers.CharField(),
-                                "description": drf_serializers.CharField(),
-                                "date": drf_serializers.CharField(),
-                            },
+                        "transactions": drf_serializers.ListField(
+                            child=inline_serializer(
+                                name="TransactionItem",
+                                fields={
+                                    "id": drf_serializers.IntegerField(),
+                                    "amount": drf_serializers.IntegerField(),
+                                    "type": drf_serializers.CharField(),
+                                    "description": drf_serializers.CharField(),
+                                    "date": drf_serializers.CharField(),
+                                },
+                            )
                         ),
                     },
                 ),

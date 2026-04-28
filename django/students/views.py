@@ -118,8 +118,8 @@ class SkillAnalysisView(APIView):
                 response=inline_serializer(
                     name="SkillAnalysisResponse",
                     fields={
-                        "skills": UserSkillSerializer(many=True),
-                        "recommendations": SkillRecommendationSerializer(many=True),
+                        "skills": drf_serializers.ListField(child=drf_serializers.DictField()),
+                        "recommendations": drf_serializers.ListField(child=drf_serializers.DictField()),
                         "gap_analysis": inline_serializer(
                             name="GapAnalysis",
                             fields={
