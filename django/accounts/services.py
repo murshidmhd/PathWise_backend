@@ -15,6 +15,8 @@ import requests
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from students.serializers import create_student_profile
+from payments.models import Wallet
+from payments.services import PointService
 
 from .models import User
 from .tasks import send_otp_email_task
@@ -215,6 +217,19 @@ def login_user(email, password, recaptcha_token):
                 },
                 status_code=403,
             )
+
+    # Grant welcome gift SkillPoints on first-ever login (JWT doesn't fire Django's user_logged_in signal)
+    if authenticated_user.role == "student":
+        wallet, _ = Wallet.objects.get_or_create(user=authenticated_user)
+        if not wallet.is_welcome_gift_claimed:
+            PointService.add_points(
+                user=authenticated_user,
+                amount=8,
+                transaction_type="GIFT",
+                description="Welcome Gift: 8 SkillPoints credited for joining PathWise!",
+            )
+            wallet.is_welcome_gift_claimed = True
+            wallet.save()
 
     tokens = _issue_tokens(authenticated_user)
     return {
