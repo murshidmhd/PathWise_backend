@@ -1,3 +1,5 @@
+from drf_spectacular.utils import extend_schema, OpenApiResponse, inline_serializer
+from rest_framework import serializers as drf_serializers
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -27,19 +29,27 @@ def calculate_profile_completion(profile):
 class StudentProfileView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="Get student profile",
+        description="Returns the authenticated student's full profile including wallet balance and counselor details.",
+        responses={200: StudentProfileSerializer},
+        tags=["Students"],
+    )
     def get(self, request):
-
-        print("hey", request.user)
         profile = StudentProfile.objects.get_or_create(user=request.user)[0]
-
         serializer = StudentProfileSerializer(profile)
         return Response(serializer.data)
 
+    @extend_schema(
+        summary="Update student profile",
+        description="Partially updates the authenticated student's profile. Also recalculates the profile completion percentage.",
+        request=StudentProfileSerializer,
+        responses={200: StudentProfileSerializer},
+        tags=["Students"],
+    )
     def patch(self, request):
-
         try:
             profile = StudentProfile.objects.get(user=request.user)
-
         except StudentProfile.DoesNotExist:
             return Response({"detail": "Profile not found."}, status=404)
 
@@ -49,7 +59,6 @@ class StudentProfileView(APIView):
             profile = serializer.save()
             profile.profile_completed = calculate_profile_completion(profile)
             profile.save(update_fields=["profile_completed", "updated_at"])
-
             return Response(serializer.data)
         return Response(serializer.errors, status=400)
 
@@ -57,6 +66,25 @@ class StudentProfileView(APIView):
 class StudentProfileTrackingView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="Get student onboarding tracking",
+        description="Returns the current onboarding status flags: is_onboarded, assessment_taken, roadmap_created, and profile_completed percentage.",
+        responses={
+            200: OpenApiResponse(
+                description="Tracking data",
+                response=inline_serializer(
+                    name="TrackingResponse",
+                    fields={
+                        "is_onboarded": drf_serializers.BooleanField(),
+                        "assessment_taken": drf_serializers.BooleanField(),
+                        "roadmap_created": drf_serializers.BooleanField(),
+                        "profile_completed": drf_serializers.IntegerField(),
+                    },
+                ),
+            )
+        },
+        tags=["Students"],
+    )
     def get(self, request):
         try:
             profile = StudentProfile.objects.get(user=request.user)
@@ -81,6 +109,30 @@ class StudentProfileTrackingView(APIView):
 class SkillAnalysisView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="Get skill analysis for current student",
+        description="Returns the student's current skill proficiency levels, personalized growth recommendations, and an automated gap analysis based on their active career roadmap.",
+        responses={
+            200: OpenApiResponse(
+                description="Skill analysis data",
+                response=inline_serializer(
+                    name="SkillAnalysisResponse",
+                    fields={
+                        "skills": UserSkillSerializer(many=True),
+                        "recommendations": SkillRecommendationSerializer(many=True),
+                        "gap_analysis": inline_serializer(
+                            name="GapAnalysis",
+                            fields={
+                                "required_skill": drf_serializers.CharField(),
+                                "match_rate": drf_serializers.IntegerField(),
+                            },
+                        ),
+                    },
+                ),
+            )
+        },
+        tags=["Students"],
+    )
     def get(self, request):
         user = request.user
 
