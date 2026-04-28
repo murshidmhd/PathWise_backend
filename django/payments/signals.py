@@ -14,9 +14,9 @@ def grant_welcome_gift(sender, request, user, **kwargs):
     if not wallet.is_welcome_gift_claimed:
         PointService.add_points(
             user=user,
-            amount=10,
+            amount=8,
             transaction_type="GIFT",
-            description="Welcome Gift: 10 SkillPoints credited for joining PathWise!",
+            description="Welcome Gift: 8 SkillPoints credited for joining PathWise! Use them to create your Career Roadmap.",
         )
         wallet.is_welcome_gift_claimed = True
         wallet.save()
