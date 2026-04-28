@@ -228,8 +228,9 @@ def login_user(email, password, recaptcha_token):
                 transaction_type="GIFT",
                 description="Welcome Gift: 8 SkillPoints credited for joining PathWise!",
             )
+            wallet.refresh_from_db()
             wallet.is_welcome_gift_claimed = True
-            wallet.save()
+            wallet.save(update_fields=["is_welcome_gift_claimed"])
 
     tokens = _issue_tokens(authenticated_user)
     return {

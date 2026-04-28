@@ -18,5 +18,6 @@ def grant_welcome_gift(sender, request, user, **kwargs):
             transaction_type="GIFT",
             description="Welcome Gift: 8 SkillPoints credited for joining PathWise! Use them to create your Career Roadmap.",
         )
+        wallet.refresh_from_db()
         wallet.is_welcome_gift_claimed = True
-        wallet.save()
+        wallet.save(update_fields=["is_welcome_gift_claimed"])
