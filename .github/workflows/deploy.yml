@@ -21,6 +21,9 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v2
         with:
@@ -34,6 +37,8 @@ jobs:
           context: ./django
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_DJANGO }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Build and Push Websocket Image
         uses: docker/build-push-action@v4
@@ -41,6 +46,8 @@ jobs:
           context: ./websocket
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_WS }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Build and Push AI Service Image
         uses: docker/build-push-action@v4
@@ -48,6 +55,8 @@ jobs:
           context: ./ai-service
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_AI }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   deploy:
     needs: build-and-push
