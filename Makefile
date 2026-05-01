@@ -7,8 +7,8 @@ DCP = sudo docker-compose -f docker-compose.prod.yml
 # Default target
 help:
 	@echo "PathWise Management Commands:"
-	@echo "  ps               Show running containers status (Development)
-  prod-ps          Show running containers status (Production)"
+	@echo "  ps               Show running containers status (Development)"
+	@echo "  prod-ps          Show running containers status (Production)"
 	@echo "  up               Start containers (Development)"
 	@echo "  prod-up          Start containers (Production - GHCR Images)"
 	@echo "  down             Stop all containers"
