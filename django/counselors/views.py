@@ -1,3 +1,4 @@
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from rest_framework.generics import ListAPIView
 from rest_framework.permissions import IsAuthenticated
@@ -145,9 +146,48 @@ class AvailableCounselorListView(ListAPIView):
     serializer_class = AvailableCounselorSerializer
 
     def get_queryset(self):
-        return CounselorProfile.objects.filter(
+        queryset = CounselorProfile.objects.filter(
             approval_status="approved", is_available=True
         ).order_by("-rating")
+
+        # Get filter parameters
+        search = self.request.query_params.get("search")
+        specialization = self.request.query_params.get("specialization")
+        location = self.request.query_params.get("location")
+        min_rating = self.request.query_params.get("min_rating")
+        min_experience = self.request.query_params.get("min_experience")
+
+        # Apply Search
+        if search:
+            queryset = queryset.filter(
+                Q(user__full_name__icontains=search)
+                | Q(specialization__icontains=search)
+                | Q(qualification__icontains=search)
+                | Q(bio__icontains=search)
+                | Q(city__icontains=search)
+                | Q(state__icontains=search)
+            )
+
+        # Apply Specific Filters
+        if specialization and specialization.lower() != "all":
+            queryset = queryset.filter(specialization__iexact=specialization)
+
+        if location and location.lower() != "all":
+            queryset = queryset.filter(Q(city__icontains=location) | Q(state__icontains=location))
+
+        if min_rating and min_rating.lower() != "all":
+            try:
+                queryset = queryset.filter(rating__gte=float(min_rating))
+            except ValueError:
+                pass
+
+        if min_experience and min_experience.lower() != "all":
+            try:
+                queryset = queryset.filter(experience_years__gte=int(min_experience))
+            except ValueError:
+                pass
+
+        return queryset
 
 
 # you want to check this area
@@ -198,3 +238,26 @@ class CounselorRequestView(APIView):
         )
         serializer = CounselorRequestSerializer(requests, many=True)
         return Response(serializer.data)
+
+
+class CounselorFilterOptionsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        specializations = (
+            CounselorProfile.objects.filter(approval_status="approved")
+            .values_list("specialization", flat=True)
+            .distinct()
+        )
+        locations = (
+            CounselorProfile.objects.filter(approval_status="approved")
+            .values_list("city", flat=True)
+            .distinct()
+        )
+
+        return Response(
+            {
+                "specializations": sorted(list(set(s for s in specializations if s))),
+                "locations": sorted(list(set(l for l in locations if l))),
+            }
+        )

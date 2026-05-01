@@ -8,10 +8,12 @@ from .views import (
     CounselorReviewView,
     AvailableCounselorListView,
     CounselorRequestView,
+    CounselorFilterOptionsView,
 )
 
 
 urlpatterns = [
+    path("filter-options/", CounselorFilterOptionsView.as_view(), name="filter-options"),
     path("profile/", CounselorProfileView.as_view(), name="counselor-profile"),
     path(
         "reviews/<int:counselor_id>/",
