@@ -1,17 +1,59 @@
-name: PathWise Auto-Deploy
+name: PathWise Professional Deploy
 
 on:
   push:
-    branches: [ beta ]  # This triggers the deploy whenever you push to main
+    branches: [ beta ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME_DJANGO: murshidmhd/pathwise-django
+  IMAGE_NAME_WS: murshidmhd/pathwise-websocket
+  IMAGE_NAME_AI: murshidmhd/pathwise-ai-service
 
 jobs:
-  deploy:
+  build-and-push:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      - name: Deploy to AWS EC2
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push Django Image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./django
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_DJANGO }}:latest
+
+      - name: Build and Push Websocket Image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./websocket
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_WS }}:latest
+
+      - name: Build and Push AI Service Image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./ai-service
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_AI }}:latest
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to AWS EC2 via SSH
         uses: appleboy/ssh-action@master
         with:
           host: 52.66.53.143
@@ -20,7 +62,9 @@ jobs:
           script: |
             cd ~/pathwise_backend
             git pull origin beta
-            sudo docker-compose down
-            sudo docker-compose up --build -d
-            sleep 10
-            sudo docker-compose restart nginx
+            # Log in to GHCR on the EC2 server to pull private images
+            echo "${{ secrets.GITHUB_TOKEN }}" | sudo docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            # Pull latest images and restart
+            sudo docker-compose -f docker-compose.prod.yml pull
+            sudo docker-compose -f docker-compose.prod.yml up -d
+            sudo docker image prune -f

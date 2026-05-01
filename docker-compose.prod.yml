@@ -8,15 +8,12 @@ services:
     volumes:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
       - /etc/letsencrypt:/etc/letsencrypt:ro
-      - static_volume:/app/staticfiles # Add this
+      - static_volume:/app/staticfiles
     depends_on:
       - django
       - websocket
       - ai-service
     restart: always
-
-
-
 
   db1:
     image: postgres:15
@@ -46,15 +43,14 @@ services:
 
   # --- MAIN DJANGO API ---
   django:
-    build: ./django
-    #  command: python manage.py runserver 0.0.0.0:8000
+    image: ghcr.io/murshidmhd/pathwise-django:latest
     ports:
       - "8000:8000"
     env_file:
       - ./django/.env
     volumes:
       - ./django:/app
-      - static_volume:/app/staticfiles # Add this
+      - static_volume:/app/staticfiles
     depends_on:
       - redis
       - db1
@@ -62,7 +58,7 @@ services:
 
   # --- CELERY WORKER ---
   celery:
-    build: ./django
+    image: ghcr.io/murshidmhd/pathwise-django:latest
     command: celery -A backend worker --loglevel=info
     env_file:
       - ./django/.env
@@ -72,11 +68,12 @@ services:
     working_dir: /app
     depends_on:
       - redis
+      - db1
     restart: always
 
   # --- CELERY BEAT ---
   celery-beat:
-    build: ./django
+    image: ghcr.io/murshidmhd/pathwise-django:latest
     command: celery -A backend beat --loglevel=info
     env_file:
       - ./django/.env
@@ -84,11 +81,12 @@ services:
       - ./django:/app
     depends_on:
       - redis
+      - db1
     restart: always
 
   # --- WEBSOCKET SERVICE (DAPHNE) ---
   websocket:
-    build: ./websocket
+    image: ghcr.io/murshidmhd/pathwise-websocket:latest
     command: daphne -b 0.0.0.0 -p 8001 core.asgi:application
     ports:
       - "8001:8001"
@@ -105,7 +103,7 @@ services:
 
   # --- AI SERVICE (FASTAPI) ---
   ai-service: 
-    build: ./ai-service
+    image: ghcr.io/murshidmhd/pathwise-ai-service:latest
     command: uvicorn main:app --host 0.0.0.0 --port 8002
     ports:
       - "8002:8002"
@@ -119,10 +117,6 @@ services:
   redis:
     image: redis:7
     restart: always
-
-  # Add other volumes if needed, but removing postgres volumes
-
-# ... (all your services above)
 
 volumes:
   static_volume:
