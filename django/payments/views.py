@@ -224,6 +224,32 @@ class PointHistoryView(APIView):
             for t in transactions
         ]
 
-        wallet, _ = Wallet.objects.get_or_create(user=request.user)
-
         return Response({"balance": wallet.balance, "transactions": data})
+
+
+class WalletView(APIView):
+    @extend_schema(
+        summary="Get user wallet status",
+        description="Returns the current SkillPoint balance and whether the welcome gift has been claimed.",
+        responses={
+            200: OpenApiResponse(
+                response=inline_serializer(
+                    name="WalletResponse",
+                    fields={
+                        "balance": drf_serializers.IntegerField(),
+                        "is_welcome_gift_claimed": drf_serializers.BooleanField(),
+                    },
+                )
+            )
+        },
+        tags=["Payments"],
+    )
+    def get(self, request):
+        wallet, _ = Wallet.objects.get_or_create(user=request.user)
+        return Response(
+            {
+                "balance": wallet.balance,
+                "is_welcome_gift_claimed": wallet.is_welcome_gift_claimed,
+            },
+            status=status.HTTP_200_OK,
+        )
