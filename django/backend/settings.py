@@ -147,7 +147,7 @@ DATABASES = {
         "PORT": os.getenv("DB_PORT", "5432"),
         "CONN_MAX_AGE": 600,  # Keeps the connection open for 10 minutes
         "OPTIONS": {
-            "sslmode": "require",  # This is the secret sauce for AWS RDS
+            "sslmode": os.getenv("DB_SSLMODE", "require"),
         },
     }
 }
