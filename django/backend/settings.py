@@ -266,6 +266,15 @@ CACHES = {
     }
 }
 
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [os.getenv("REDIS_URL", "redis://redis:6379/0")],
+        },
+    },
+}
+
 CELERY_BEAT_SCHEDULE = {
     "cleanup-pending-certificates-every-15-mins": {
         "task": "accounts.tasks.cleanup_pending_certificates",
