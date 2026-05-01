@@ -14,3 +14,4 @@ razorpay==2.0.1
 gunicorn
 boto3==1.38.0
 django-storages==1.14.6
+
