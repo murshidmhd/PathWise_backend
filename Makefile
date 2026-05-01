@@ -2,12 +2,13 @@
 DC = sudo docker-compose
 DCP = sudo docker-compose -f docker-compose.prod.yml
 
-.PHONY: build up down restart migrate makemigrations shell logs django-bash db-shell deploy clean help ps prune prod-up prod-logs
+.PHONY: build up down restart migrate makemigrations shell logs django-bash db-shell deploy clean help ps prod-ps prune prod-up prod-logs
 
 # Default target
 help:
 	@echo "PathWise Management Commands:"
-	@echo "  ps               Show running containers status"
+	@echo "  ps               Show running containers status (Development)
+  prod-ps          Show running containers status (Production)"
 	@echo "  up               Start containers (Development)"
 	@echo "  prod-up          Start containers (Production - GHCR Images)"
 	@echo "  down             Stop all containers"
@@ -24,6 +25,9 @@ help:
 # Monitoring
 ps:
 	$(DC) ps
+
+prod-ps:
+	$(DCP) ps
 
 # Standard Commands
 up:
