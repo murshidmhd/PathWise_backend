@@ -1,34 +1,37 @@
-# Variable to easily switch between 'docker compose' and 'docker-compose'
+# Variables
 DC = sudo docker-compose
+DCP = sudo docker-compose -f docker-compose.prod.yml
 
-.PHONY: build up down restart migrate makemigrations shell logs django-bash db-shell deploy clean help
+.PHONY: build up down restart migrate makemigrations shell logs django-bash db-shell deploy clean help ps prune prod-up prod-logs
 
 # Default target
 help:
-	@echo "PathWise EC2 Management Commands:"
-	@echo "  deploy           Pull code, rebuild, and migrate"
-	@echo "  up               Start all containers in background"
-	@echo "  down             Stop and remove containers"
+	@echo "PathWise Management Commands:"
+	@echo "  ps               Show running containers status"
+	@echo "  up               Start containers (Development)"
+	@echo "  prod-up          Start containers (Production - GHCR Images)"
+	@echo "  down             Stop all containers"
 	@echo "  restart          Restart all services"
 	@echo "  migrate          Apply Django database migrations"
 	@echo "  makemigrations   Create new migrations"
 	@echo "  shell            Open Django Python shell"
-	@echo "  db-shell         Access RDS PostgreSQL directly"
-	@echo "  logs             View real-time logs from all containers"
-	@echo "  django-bash      Open terminal inside Django container"
+	@echo "  db-shell         Access local PostgreSQL (db1) directly"
+	@echo "  logs             View real-time logs (Development)"
+	@echo "  prod-logs        View real-time logs (Production)"
+	@echo "  prune            Clean up unused Docker images and space"
 	@echo "  clean            Remove __pycache__ and .pyc files"
 
-# Deployment workflow
-deploy:
-	git pull origin beta
-	$(DC) up -d --build
-	$(DC) exec django python manage.py migrate
+# Monitoring
+ps:
+	$(DC) ps
 
-build:
-	$(DC) build
-
+# Standard Commands
 up:
 	$(DC) up -d
+
+prod-up:
+	$(DCP) pull
+	$(DCP) up -d
 
 down:
 	$(DC) down
@@ -49,19 +52,26 @@ shell:
 django-bash:
 	$(DC) exec django bash
 
-# Database
+# Database (Local db1)
 db-shell:
-	PGPASSWORD='b6489ZUBYPnTQ3r' psql -h pathwise-db.cly28megm1pn.ap-south-1.rds.amazonaws.com -U pathwise_admin -d pathwise_db
+	$(DC) exec db1 psql -U pathwise_admin -d pathwise-db
 
 # Monitoring
 logs:
 	$(DC) logs -f
 
-# Specific Service Logs (Useful for debugging Google Auth)
+prod-logs:
+	$(DCP) logs -f
+
+# Specific Service Logs
 logs-django:
 	$(DC) logs -f django
 
 # Cleanup
+prune:
+	sudo docker system prune -a -f
+	sudo docker image prune -f
+
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +
 	find . -type f -name "*.pyc" -delete
