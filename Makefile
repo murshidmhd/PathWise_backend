@@ -83,7 +83,7 @@ db-shell:
 	$(DC) exec db1 psql -U pathwise_admin -d pathwise-db
 
 db-restore:
-	cat backup.sql | $(DC) exec -i db1 psql -U pathwise_admin -d pathwise-db
+	cat backup.sql | $(DC) exec -T db1 psql -U pathwise_admin -d pathwise-db
 
 db-backup:
 	$(DC) exec db1 pg_dump -U pathwise_admin pathwise-db > backup.sql
@@ -108,7 +108,7 @@ prod-db-shell:
 	$(DCP) exec db1 psql -U pathwise_admin -d pathwise-db
 
 prod-db-restore:
-	cat backup.sql | $(DCP) exec -i db1 psql -U pathwise_admin -d pathwise-db
+	cat backup.sql | $(DCP) exec -T db1 psql -U pathwise_admin -d pathwise-db
 
 # Monitoring Logs
 logs:

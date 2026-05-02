@@ -39,6 +39,25 @@ def _issue_tokens(user):
     }
 
 
+def _check_and_grant_welcome_gift(user):
+    """
+    Grant welcome gift SkillPoints on first-ever successful entry (login or registration).
+    This is called from all authentication entry points.
+    """
+    if user.role == "student":
+        wallet, _ = Wallet.objects.get_or_create(user=user)
+        if not wallet.is_welcome_gift_claimed:
+            PointService.add_points(
+                user=user,
+                amount=8,
+                transaction_type="GIFT",
+                description="Welcome Gift: 8 SkillPoints credited for joining PathWise!",
+            )
+            wallet.refresh_from_db()
+            wallet.is_welcome_gift_claimed = True
+            wallet.save(update_fields=["is_welcome_gift_claimed"])
+
+
 def _is_valid_recaptcha(token):
     if settings.DEBUG:
         return True
@@ -137,6 +156,7 @@ def verify_registration_otp(email, otp):
             )
 
     user = _create_user_from_registration(pending_user)
+    _check_and_grant_welcome_gift(user)
     tokens = _issue_tokens(user)
 
     cache.delete(f"otp:{email}")
@@ -218,19 +238,7 @@ def login_user(email, password, recaptcha_token):
                 status_code=403,
             )
 
-    # Grant welcome gift SkillPoints on first-ever login (JWT doesn't fire Django's user_logged_in signal)
-    if authenticated_user.role == "student":
-        wallet, _ = Wallet.objects.get_or_create(user=authenticated_user)
-        if not wallet.is_welcome_gift_claimed:
-            PointService.add_points(
-                user=authenticated_user,
-                amount=8,
-                transaction_type="GIFT",
-                description="Welcome Gift: 8 SkillPoints credited for joining PathWise!",
-            )
-            wallet.refresh_from_db()
-            wallet.is_welcome_gift_claimed = True
-            wallet.save(update_fields=["is_welcome_gift_claimed"])
+    _check_and_grant_welcome_gift(authenticated_user)
 
     tokens = _issue_tokens(authenticated_user)
     return {
@@ -302,6 +310,7 @@ def authenticate_google_user(token):
             "data": {"is_new_user": True, "temp_token": temp_token},
         }
 
+    _check_and_grant_welcome_gift(user)
     tokens = _issue_tokens(user)
     return {
         "data": {
@@ -332,6 +341,7 @@ def complete_google_registration(temp_token, role):
         create_student_profile(user=user)
 
     cache.delete(f"google_temp:{temp_token}")
+    _check_and_grant_welcome_gift(user)
     tokens = _issue_tokens(user)
 
     return {

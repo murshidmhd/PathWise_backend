@@ -17,7 +17,7 @@ def notification_payload(notification):
         "user_id": notification.user_id,
         "type": notification.type,
         "title": notification.title,
-        "message": notification.message,
+        "message": notification.message,    
         "data": notification.data,
         "is_read": notification.is_read,
         "created_at": notification.created_at.isoformat(),
