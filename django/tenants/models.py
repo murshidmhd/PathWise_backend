@@ -15,3 +15,9 @@ class Organization(TenantMixin):
 
 class Domain(DomainMixin):
     pass
+
+
+#note of mine 
+# TenantMixin so basically this helps to get the schema of the tenant when a tenant login 
+#this add the schema_name feild to the tenant model 
+# and DomainMixin so basically this helps to get the domain of the tenant when a tenant login
