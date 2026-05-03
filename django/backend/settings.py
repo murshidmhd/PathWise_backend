@@ -49,27 +49,34 @@ ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
 
 # Application definition
 
-INSTALLED_APPS = [
+SHARED_APPS = [
+    "django_tenants",  # must be at the top
+    "tenants",         # your new app
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "accounts",
     "rest_framework",
-    "rest_framework.authtoken",
-    "rest_framework_simplejwt.token_blacklist",
     "drf_spectacular",
     "corsheaders",
+    "storages",
+]
+
+TENANT_APPS = [
+    "accounts",
     "admin_dashboard",
     "students",
     "counselors",
     "assessments",
     "roadmap",
     "payments",
-    "storages",
+    "rest_framework.authtoken",
+    "rest_framework_simplejwt.token_blacklist",
 ]
+
+INSTALLED_APPS = SHARED_APPS + [app for app in TENANT_APPS if app not in SHARED_APPS]
 
 from corsheaders.defaults import default_headers
 
@@ -85,6 +92,7 @@ CORS_ALLOW_HEADERS = list(default_headers) + [
 ]
 
 MIDDLEWARE = [
+    "django_tenants.middleware.main.TenantMainMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -123,7 +131,7 @@ TEMPLATES = [
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
-                "django.template.context_processors.request",
+                "django.template.context_processors.request",update 
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
             ],
@@ -139,7 +147,7 @@ WSGI_APPLICATION = "backend.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": os.getenv("DB_ENGINE", "django.db.backends.postgresql"),
+        "ENGINE": "django_tenants.postgresql_backend",
         "NAME": os.getenv("DB_NAME", "career_db"),
         "USER": os.getenv("DB_USER", "career_user"),
         "PASSWORD": os.getenv("DB_PASSWORD", ""),
@@ -321,3 +329,12 @@ if AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY:
         },
     }
 
+
+
+
+TENANT_MODEL = 'tenants.Organization'
+TENANT_DOMAIN_MODEL = 'tenants.Domain'
+
+DATABASE_ROUTERS = (
+    'django_tenants.routers.TenantSyncRouter',
+)
