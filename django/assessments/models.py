@@ -1,54 +1,7 @@
 from django.db import models
+from tenants.models import Question
 
 
-class Question(models.Model):
-
-    SECTION_CHOICES = [
-        ('aptitude', 'Aptitude'),
-        ('personality', 'Personality'),
-        ('interest', 'Interest'),
-    ]
-
-    SUB_SECTION_CHOICES = [
-        ('logical', 'Logical'),
-        ('numerical', 'Numerical'),
-        ('verbal', 'Verbal'),
-        ('spatial', 'Spatial'),
-    ]
-
-    RIASEC_CHOICES = [
-        ('R', 'Realistic'),
-        ('I', 'Investigative'),
-        ('A', 'Artistic'),
-        ('S', 'Social'),
-        ('E', 'Enterprising'),
-        ('C', 'Conventional'),
-    ]
-
-    section       = models.CharField(max_length=20, choices=SECTION_CHOICES)
-    sub_section   = models.CharField(max_length=50, choices=SUB_SECTION_CHOICES, null=True, blank=True)
-    question_text = models.TextField()
-
-    option_a = models.CharField(max_length=500, null=True, blank=True)
-    option_b = models.CharField(max_length=500, null=True, blank=True)
-    option_c = models.CharField(max_length=500, null=True, blank=True)
-    option_d = models.CharField(max_length=500, null=True, blank=True)
-
-    option_a_type = models.CharField(max_length=10, choices=RIASEC_CHOICES, null=True, blank=True)
-    option_b_type = models.CharField(max_length=10, choices=RIASEC_CHOICES, null=True, blank=True)
-    option_c_type = models.CharField(max_length=10, choices=RIASEC_CHOICES, null=True, blank=True)
-    option_d_type = models.CharField(max_length=10, choices=RIASEC_CHOICES, null=True, blank=True)
-
-    correct_answer = models.CharField(max_length=1, null=True, blank=True)
-    marks          = models.IntegerField(default=1)
-
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ['section', 'sub_section']
-
-    def __str__(self):
-        return f"[{self.section}] {self.question_text[:60]}"
 
 
 class Assessment(models.Model):
@@ -91,7 +44,7 @@ class AssessmentAnswer(models.Model):
         related_name='answers'
     )
     question = models.ForeignKey(
-        Question,
+        'tenants.Question',
         on_delete=models.CASCADE,
         related_name='answers'
     )
