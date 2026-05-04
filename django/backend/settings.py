@@ -228,6 +228,13 @@ CORS_ALLOWED_ORIGIN_REGEXES = [
     r"^http://.*\.localhost:5173$",
 ]
 
+CORS_ALLOW_CREDENTIALS = True
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://path-wise-frontend.vercel.app",
+    "https://pathwise.duckdns.org",
+]
+
 
 # Email settings
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
