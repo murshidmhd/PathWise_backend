@@ -29,6 +29,7 @@ class FCMTokenView(APIView):
 class NotificationListView(APIView):
     def get(self, request):
         user_id = request.query_params.get("user_id")
+        print("user_id", user_id)
         if not user_id:
             return Response(
                 {"error": "user_id is required"}, status=status.HTTP_400_BAD_REQUEST
