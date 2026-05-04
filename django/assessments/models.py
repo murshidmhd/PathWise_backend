@@ -1,7 +1,4 @@
 from django.db import models
-from tenants.models import Question
-
-
 
 
 class Assessment(models.Model):
