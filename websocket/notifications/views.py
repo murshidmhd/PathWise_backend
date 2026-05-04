@@ -53,3 +53,37 @@ class MarkNotificationReadView(APIView):
             return Response(
                 {"error": "Notification not found"}, status=status.HTTP_404_NOT_FOUND
             )
+
+
+class SendNotificationView(APIView):
+    """
+    Internal API view to send a notification from other services.
+    """
+
+    def post(self, request):
+        from .utils import send_notification
+
+        user_id = request.data.get("user_id")
+        title = request.data.get("title")
+        message = request.data.get("message")
+        notification_type = request.data.get("type", "system")
+        data = request.data.get("data", {})
+
+        if not all([user_id, title, message]):
+            return Response(
+                {"error": "user_id, title, and message are required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        notification = send_notification(
+            user_id=user_id,
+            title=title,
+            message=message,
+            data=data,
+            notification_type=notification_type,
+        )
+
+        return Response(
+            {"message": "Notification sent", "id": notification.id},
+            status=status.HTTP_201_CREATED,
+        )

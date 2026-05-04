@@ -167,6 +167,16 @@ class AdminCounselorRequestActionView(APIView):
                 pk=pk
             ).update(status="rejected")
 
+            # SEND NOTIFICATION
+            from backend.notification_utils import send_notification
+            send_notification(
+                user_id=student.user.id,
+                title="Counselor Request Accepted! 🎉",
+                message=f"Good news! Your request for counselor {counselor_request.counselor.full_name} has been approved. You can now start chatting.",
+                notification_type="mentor_request",
+                data={"counselor_id": counselor_request.counselor.id}
+            )
+
             return Response({"message": "Request approved and counselor assigned."})
 
         elif action == "reject":

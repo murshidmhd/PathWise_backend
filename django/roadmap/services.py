@@ -163,24 +163,14 @@ def generate_roadmap(user, assessment_id, custom_career_title=None):
     RoadmapMilestone.objects.bulk_create(milestones)
 
     # --- SEND NOTIFICATION ---
-    try:
-        # 1. Broadcaster (WebSocket)
-        channel_layer = get_channel_layer()
-        async_to_sync(channel_layer.group_send)(
-            f"user_{user.id}",
-            {
-                "type": "notify",
-                "notification": {
-                    "title": "Roadmap Ready! 🚀",
-                    "message": f"Your career roadmap for {career_title} is now available.",
-                    "type": "ROADMAP_GENERATED",
-                    "data": {"roadmap_id": str(roadmap.id)}
-                }
-            }
-        )
-    except Exception as e:
-        # We don't want to fail the roadmap creation if notification fails
-        print(f"Error sending roadmap notification: {e}")
+    from backend.notification_utils import send_notification
+    send_notification(
+        user_id=user.id,
+        title="Roadmap Ready! 🚀",
+        message=f"Your career roadmap for '{career_title}' is now available in your dashboard.",
+        notification_type="roadmap",
+        data={"roadmap_id": str(roadmap.id)}
+    )
 
     return roadmap
 

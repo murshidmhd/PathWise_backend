@@ -57,6 +57,24 @@ def _check_and_grant_welcome_gift(user):
             wallet.is_welcome_gift_claimed = True
             wallet.save(update_fields=["is_welcome_gift_claimed"])
 
+            # SEND NOTIFICATIONS
+            from backend.notification_utils import send_notification
+            # 1. Welcome Message
+            send_notification(
+                user_id=user.id,
+                title="Welcome to PathWise! 🌟",
+                message=f"Hi {user.first_name or 'there'}, we're excited to help you find your perfect career path!",
+                notification_type="welcome"
+            )
+            # 2. Points Reward
+            send_notification(
+                user_id=user.id,
+                title="SkillPoints Earned! 💰",
+                message="You've received 8 SkillPoints as a welcome gift. Use them to request mentors or generate roadmaps.",
+                notification_type="points",
+                data={"amount": 8}
+            )
+
 
 def _is_valid_recaptcha(token):
     if settings.DEBUG:
