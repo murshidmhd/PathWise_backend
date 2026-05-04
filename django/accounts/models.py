@@ -9,22 +9,18 @@ class UserManager(BaseUserManager):
             raise ValueError("Email is required")
 
         email = self.normalize_email(email)
-
         user = self.model(email=email, **extra_fields)
-
         user.set_password(password)
-
         user.save(using=self._db)
-
         return user
 
     def create_superuser(self, email, password=None, **extra_fields):
-
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
-        extra_fields.setdefault("role", "admin")
+        extra_fields.setdefault("role", "platform_admin")  # ← CHANGED
         extra_fields.setdefault("is_active", True)
         extra_fields.setdefault("is_verified", True)
+        extra_fields.setdefault("is_approved", True)  # ← ADDED
 
         return self.create_user(email, password, **extra_fields)
 
@@ -34,9 +30,10 @@ class User(AbstractUser):
         ("student", "Student"),
         ("counselor", "Counselor"),
         ("admin", "Admin"),
+        ("platform_admin", "Platform Admin"),  # ← ADDED
     ]
 
-    username = None  # remove username login
+    username = None
     email = models.EmailField(unique=True)
     objects = UserManager()
 
@@ -52,10 +49,16 @@ class User(AbstractUser):
     updated_at = models.DateTimeField(auto_now=True)
 
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = [
-        "first_name",
-        "last_name",
-    ]  # this is basically when we create the super user that time its ask for the this two filds also
+    REQUIRED_FIELDS = ["first_name", "last_name"]
+    # this is basically when we create the super user that time its ask for the this two filds also
 
     def __str__(self):
         return self.email
+
+    @property
+    def is_platform_admin(self):
+        return self.role == "platform_admin"
+
+    @property
+    def is_tenant_admin(self):
+        return self.role == "admin"
