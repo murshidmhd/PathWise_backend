@@ -50,6 +50,7 @@ ALLOWED_HOSTS = [".localhost", ".pathwise.duckdns.org", "127.0.0.1", "52.66.53.1
 # Application definition
 
 SHARED_APPS = [
+    "daphne",
     "django_tenants",  # must be at the top
     "tenants",         # your new app
     "django.contrib.admin",
@@ -62,6 +63,7 @@ SHARED_APPS = [
     "drf_spectacular",
     "corsheaders",
     "storages",
+    "channels",
 ]
 
 TENANT_APPS = [
@@ -72,6 +74,9 @@ TENANT_APPS = [
     "assessments",
     "roadmap",
     "payments",
+    "notifications",
+    "chat",
+    "signaling",
     "rest_framework.authtoken",
     "rest_framework_simplejwt.token_blacklist",
 ]
@@ -283,6 +288,8 @@ CACHES = {
         "LOCATION": REDIS_URL,
     }
 }
+
+ASGI_APPLICATION = "backend.asgi.application"
 
 CHANNEL_LAYERS = {
     "default": {
