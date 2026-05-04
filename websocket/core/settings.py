@@ -32,7 +32,7 @@ DEBUG = os.getenv("DJANGO_DEBUG", "True").strip().lower() in {"1", "true", "yes"
 ALLOWED_HOSTS = [
     host.strip()
     for host in os.getenv(
-        "DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,websocket,pathwise.duckdns.org,path-wise-frontend.vercel.app"
+        "DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,websocket,pathwise.duckdns.org,.pathwise.duckdns.org,path-wise-frontend.vercel.app"
     ).split(",")
     if host.strip()
 ]
@@ -159,12 +159,17 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5173",
     "http://localhost:5173",
     "https://path-wise-frontend.vercel.app",
+    "https://pathwise.duckdns.org",
 ]
 
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https?://([a-z0-9-]+\.)?pathwise\.duckdns\.org$",
+]
 
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
     "https://pathwise.duckdns.org",
+    "https://*.pathwise.duckdns.org",
     "https://path-wise-frontend.vercel.app",
 ]
 CORS_ALLOW_CREDENTIALS = True
