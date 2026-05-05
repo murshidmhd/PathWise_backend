@@ -355,3 +355,6 @@ TENANT_DOMAIN_MODEL = 'tenants.Domain'
 DATABASE_ROUTERS = (
     'django_tenants.routers.TenantSyncRouter',
 )
+
+# FIREBASE NOTIFICATIONS
+FIREBASE_ACCOUNT_KEY_PATH = os.path.join(BASE_DIR, "firebase-credentials.json")

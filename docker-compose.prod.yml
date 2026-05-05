@@ -38,6 +38,7 @@ services:
       - ./django/.env
     volumes:
       - static_volume:/app/staticfiles
+      - ./django/firebase-credentials.json:/app/firebase-credentials.json
     depends_on:
       - redis
       - db1
@@ -50,7 +51,7 @@ services:
     env_file:
       - ./django/.env
     volumes:
-      - ./firebase-credentials.json:/app/firebase-credentials.json
+      - ./django/firebase-credentials.json:/app/firebase-credentials.json
     working_dir: /app
     depends_on:
       - redis
@@ -64,7 +65,8 @@ services:
     env_file:
       - ./django/.env
     volumes:
-      - static_volume:/app/staticfiles # Not really needed for beat but kept for consistency if needed
+      - static_volume:/app/staticfiles
+      - ./django/firebase-credentials.json:/app/firebase-credentials.json
     depends_on:
       - redis
       - db1
@@ -79,7 +81,7 @@ services:
     env_file:
       - ./django/.env
     volumes:
-      - ./firebase-credentials.json:/app/firebase-credentials.json
+      - ./django/firebase-credentials.json:/app/firebase-credentials.json
     working_dir: /app
     depends_on:
       - redis
