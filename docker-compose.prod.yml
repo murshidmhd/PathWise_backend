@@ -11,7 +11,6 @@ services:
       - static_volume:/app/staticfiles
     depends_on:
       - django
-      - websocket
       - ai-service
     restart: always
 
@@ -72,21 +71,6 @@ services:
       - db1
     restart: always
 
-  # --- WEBSOCKET SERVICE (DAPHNE) ---
-  websocket:
-    image: ghcr.io/murshidmhd/pathwise-django:latest
-    command: daphne -b 0.0.0.0 -p 8001 backend.asgi:application
-    ports:
-      - "8001:8001"
-    env_file:
-      - ./django/.env
-    volumes:
-      - ./django/firebase-credentials.json:/app/firebase-credentials.json
-    working_dir: /app
-    depends_on:
-      - redis
-      - db1
-    restart: always
 
   # --- AI SERVICE (FASTAPI) ---
   ai-service: 
