@@ -231,6 +231,7 @@ CORS_ALLOWED_ORIGINS = [
 
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r"^http://.*\.localhost:5173$",
+    r"^https://.*\.pathwise\.duckdns\.org$",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -238,6 +239,7 @@ CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = [
     "https://path-wise-frontend.vercel.app",
     "https://pathwise.duckdns.org",
+    "https://*.pathwise.duckdns.org",
 ]
 
 
