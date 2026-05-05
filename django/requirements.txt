@@ -18,3 +18,4 @@ channels==4.2.0
 channels-redis==4.2.1
 django-tenants==3.10.1
 daphne==4.2.0
+firebase-admin==6.6.0
