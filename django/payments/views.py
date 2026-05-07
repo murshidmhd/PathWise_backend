@@ -210,6 +210,7 @@ class PointHistoryView(APIView):
         tags=["Payments"],
     )
     def get(self, request):
+        wallet, _ = Wallet.objects.get_or_create(user=request.user)
         transactions = PointTransaction.objects.filter(user=request.user).order_by(
             "-created_at"
         )
