@@ -1,5 +1,5 @@
-from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, OpenApiResponse, inline_serializer
+from rest_framework import serializers as drf_serializers
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
@@ -15,7 +15,25 @@ class VerifyOTPView(APIView):
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "otp_verify"
 
-
+    @extend_schema(
+        summary="Verify registration OTP",
+        description="Verifies the OTP sent to the user's email during registration. On success, completes account creation and returns a JWT access token.",
+        request=VerifyOTPSerializer,
+        responses={
+            200: OpenApiResponse(
+                description="OTP verified, account created",
+                response=inline_serializer(
+                    name="VerifyOTPResponse",
+                    fields={
+                        "access": drf_serializers.CharField(),
+                        "role": drf_serializers.CharField(),
+                    },
+                ),
+            ),
+            400: OpenApiResponse(description="Invalid or expired OTP"),
+        },
+        tags=["Authentication"],
+    )
     def post(self, request):
         otp_serializer = VerifyOTPSerializer(data=request.data)
         otp_serializer.is_valid(raise_exception=True)
@@ -45,7 +63,22 @@ class ResendOTPView(APIView):
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "otp_send"
 
-    
+    @extend_schema(
+        summary="Resend registration OTP",
+        description="Resends the OTP email to the user if the previous one expired.",
+        request=ResendOTPSerializer,
+        responses={
+            200: OpenApiResponse(
+                description="OTP resent successfully",
+                response=inline_serializer(
+                    name="ResendOTPResponse",
+                    fields={"message": drf_serializers.CharField()},
+                ),
+            ),
+            400: OpenApiResponse(description="Email not found or already registered"),
+        },
+        tags=["Authentication"],
+    )
     def post(self, request):
         serializer = ResendOTPSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

@@ -1,14 +1,17 @@
-import razorpay
 import json
 from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.http import HttpResponse
+from django.db import transaction
+import razorpay
+
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, OpenApiResponse, inline_serializer
+from rest_framework import serializers as drf_serializers
 
 from .models import Wallet, PaymentTransaction, PointTransaction
 from .services import PointService
@@ -19,7 +22,27 @@ client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_S
 
 class CreateOrderView(APIView):
     @extend_schema(
-        responses={201: None}, description="Create a new Razorpay Order for SkillPoints"
+        summary="Create Razorpay payment order",
+        description="Creates a Razorpay order for purchasing SkillPoints. Pricing: 10 SP = ₹350, 35 SP = ₹999, 100 SP = ₹2499.",
+        request=inline_serializer(
+            name="CreateOrderRequest",
+            fields={"points": drf_serializers.IntegerField(help_text="Number of SkillPoints to purchase (10, 35, or 100)")},
+        ),
+        responses={
+            201: OpenApiResponse(
+                description="Razorpay order created",
+                response=inline_serializer(
+                    name="CreateOrderResponse",
+                    fields={
+                        "order_id": drf_serializers.CharField(),
+                        "amount": drf_serializers.IntegerField(help_text="Amount in Paisa"),
+                        "currency": drf_serializers.CharField(),
+                        "key": drf_serializers.CharField(),
+                    },
+                ),
+            )
+        },
+        tags=["Payments"],
     )
     def post(self, request):
         user = request.user
@@ -100,46 +123,94 @@ class RazorpayWebhookView(APIView):
         except Exception as e:
             return HttpResponse(status=400)
 
-
 class VerifyPaymentView(APIView):
     @extend_schema(
-        description="Verify Razorpay payment signature and credit SkillPoints"
+        summary="Verify Razorpay payment signature",
+        description="Verifies the Razorpay payment signature and credits SkillPoints to the user's wallet if the payment is valid.",
+        request=inline_serializer(
+            name="VerifyPaymentRequest",
+            fields={
+                "razorpay_order_id": drf_serializers.CharField(),
+                "razorpay_payment_id": drf_serializers.CharField(),
+                "razorpay_signature": drf_serializers.CharField(),
+            },
+        ),
+        responses={
+            200: OpenApiResponse(description="Payment verified and points credited"),
+            400: OpenApiResponse(description="Signature verification failed"),
+        },
+        tags=["Payments"],
     )
     def post(self, request):
         data = request.data
+        razorpay_order_id = data.get("razorpay_order_id")
+        
         params_dict = {
-            "razorpay_order_id": data.get("razorpay_order_id"),
+            "razorpay_order_id": razorpay_order_id,
             "razorpay_payment_id": data.get("razorpay_payment_id"),
             "razorpay_signature": data.get("razorpay_signature"),
         }
 
         try:
+            # 1. Verify the signature
             client.utility.verify_payment_signature(params_dict)
 
-            txn = PaymentTransaction.objects.get(
-                razorpay_order_id=params_dict["razorpay_order_id"]
-            )
-            if txn.status != "SUCCESS":
-                txn.status = "SUCCESS"
-                txn.razorpay_payment_id = params_dict["razorpay_payment_id"]
-                txn.save()
-
-                PointService.add_points(
-                    user=txn.user,
-                    amount=txn.credits_added,
-                    transaction_type="PURCHASE",
-                    description=f"Manually verified SkillPoints (Order: {txn.razorpay_order_id})",
+            # 2. Use atomic transaction and select_for_update to prevent double-crediting
+            with transaction.atomic():
+                txn = PaymentTransaction.objects.select_for_update().get(
+                    razorpay_order_id=razorpay_order_id
                 )
+                
+                if txn.status != "SUCCESS":
+                    txn.status = "SUCCESS"
+                    txn.razorpay_payment_id = params_dict["razorpay_payment_id"]
+                    txn.save()
 
-            return Response({"status": "Payment Verified"}, status=status.HTTP_200_OK)
-        except Exception:
-            return Response(
-                {"status": "Payment Failed"}, status=status.HTTP_400_BAD_REQUEST
-            )
+                    # Credit the points
+                    PointService.add_points(
+                        user=txn.user,
+                        amount=txn.credits_added,
+                        transaction_type="PURCHASE",
+                        description=f"Verified SkillPoints (Order: {razorpay_order_id})",
+                    )
+                    return Response({"status": "Payment Verified & Points Added"}, status=status.HTTP_200_OK)
+                else:
+                    return Response({"status": "Already Processed"}, status=status.HTTP_200_OK)
 
+        except Exception as e:
+            return Response({"status": "Payment Verification Failed"}, status=status.HTTP_400_BAD_REQUEST)
 
 class PointHistoryView(APIView):
+    @extend_schema(
+        summary="Get SkillPoint balance and transaction history",
+        description="Returns the authenticated user's current SkillPoint balance and a full history of all transactions (gifts, purchases, spends).",
+        responses={
+            200: OpenApiResponse(
+                description="Wallet data",
+                response=inline_serializer(
+                    name="PointHistoryResponse",
+                    fields={
+                        "balance": drf_serializers.IntegerField(),
+                        "transactions": drf_serializers.ListField(
+                            child=inline_serializer(
+                                name="TransactionItem",
+                                fields={
+                                    "id": drf_serializers.IntegerField(),
+                                    "amount": drf_serializers.IntegerField(),
+                                    "type": drf_serializers.CharField(),
+                                    "description": drf_serializers.CharField(),
+                                    "date": drf_serializers.CharField(),
+                                },
+                            )
+                        ),
+                    },
+                ),
+            )
+        },
+        tags=["Payments"],
+    )
     def get(self, request):
+        wallet, _ = Wallet.objects.get_or_create(user=request.user)
         transactions = PointTransaction.objects.filter(user=request.user).order_by(
             "-created_at"
         )
@@ -154,6 +225,32 @@ class PointHistoryView(APIView):
             for t in transactions
         ]
 
-        wallet, _ = Wallet.objects.get_or_create(user=request.user)
-
         return Response({"balance": wallet.balance, "transactions": data})
+
+
+class WalletView(APIView):
+    @extend_schema(
+        summary="Get user wallet status",
+        description="Returns the current SkillPoint balance and whether the welcome gift has been claimed.",
+        responses={
+            200: OpenApiResponse(
+                response=inline_serializer(
+                    name="WalletResponse",
+                    fields={
+                        "balance": drf_serializers.IntegerField(),
+                        "is_welcome_gift_claimed": drf_serializers.BooleanField(),
+                    },
+                )
+            )
+        },
+        tags=["Payments"],
+    )
+    def get(self, request):
+        wallet, _ = Wallet.objects.get_or_create(user=request.user)
+        return Response(
+            {
+                "balance": wallet.balance,
+                "is_welcome_gift_claimed": wallet.is_welcome_gift_claimed,
+            },
+            status=status.HTTP_200_OK,
+        )

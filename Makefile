@@ -1,85 +1,131 @@
-.PHONY: build up down restart migrate makemigrations test shell logs django-bash ai-up ai-logs ai-bash clean help venv-run
+# Variables
+DC = sudo docker-compose
+DCP = sudo docker-compose -f docker-compose.prod.yml
+
+.PHONY: build up down restart migrate makemigrations shell logs django-bash db-shell deploy clean help ps prod-ps prune prod-up prod-logs prod-migrate prod-shell prod-bash prod-db-shell
 
 # Default target
 help:
-	@echo "Usage: make [target]"
+	@echo "PathWise Management Commands:"
+	@echo "--- MONITORING ---"
+	@echo "  ps               Show running containers status (Development)"
+	@echo "  prod-ps          Show running containers status (Production)"
+	@echo "  logs             View real-time logs (Development)"
+	@echo "  prod-logs        View real-time logs (Production)"
 	@echo ""
-	@echo "Targets:"
-	@echo "  build            Build or rebuild services"
-	@echo "  up               Create and start containers"
-	@echo "  down             Stop and remove containers, networks"
-	@echo "  restart          Restart all services"
-	@echo "  migrate          Apply all migrations"
-	@echo "  makemigrations   Create new migrations for all apps"
-	@echo "  test             Run all tests"
-	@echo "  shell            Open Django Python shell"
-	@echo "  django-bash      Open bash shell in the Django container"
-	@echo "  logs             View output from containers"
-	@echo "  ai-setup         Setup local venv for AI service"
-	@echo "  ai-run           Run AI service locally (FastAPI)"
-	@echo "  ai-ingest        Run AI ingestion script locally"
-	@echo "  ai-logs          View AI service logs"
-	@echo "  ai-bash          Open bash shell in the AI container"
-	@echo "  clean            Remove python cache files"
+	@echo "--- DEVELOPMENT (Local) ---"
+	@echo "  up               Start containers"
+	@echo "  down             Stop containers"
+	@echo "  restart          Restart services"
+	@echo "  migrate          Apply Django migrations (Main API)"
+	@echo "  ws-migrate       Apply Django migrations (Websocket)"
+	@echo "  makemigrations   Create new migrations"
+	@echo "  shell            Open Django shell (Main API)"
+	@echo "  ws-shell         Open Django shell (Websocket)"
+	@echo "  django-bash      Open terminal inside Django container"
+	@echo "  db-shell         Access local PostgreSQL (db1) directly"
+	@echo "  db-restore       Restore database from backup.sql (Local)"
+	@echo "  db-backup        Create a new backup.sql (Local)"
+	@echo ""
+	@echo "--- PRODUCTION (EC2) ---"
+	@echo "  prod-up          Start containers (Uses GHCR Images)"
+	@echo "  prod-migrate     Run migrations (Main API) on EC2"
+	@echo "  prod-ws-migrate  Run migrations (Websocket) on EC2"
+	@echo "  prod-shell       Open Django shell (Main API) on EC2"
+	@echo "  prod-ws-shell    Open Django shell (Websocket) on EC2"
+	@echo "  prod-db-restore  Restore database from backup.sql (EC2)"
+	@echo ""
+	@echo "--- CLEANUP ---"
+	@echo "  prune            Clean up unused Docker images and space"
+	@echo "  clean            Remove __pycache__ and .pyc files"
 
-build:
-	docker compose build
+# Monitoring
+ps:
+	$(DC) ps
 
+prod-ps:
+	$(DCP) ps
+
+# Standard Commands
 up:
-	docker compose up -d
+	$(DC) up -d
+
+prod-up:
+	$(DCP) pull
+	$(DCP) up -d
 
 down:
-	docker compose down
+	$(DC) down
 
 restart:
-	docker compose restart
+	$(DC) restart
 
+# Django Commands (Development)
 migrate:
-	docker compose exec django python manage.py migrate
-
-makemigrations:
-	docker compose exec django python manage.py makemigrations
+	$(DC) exec django python manage.py migrate
 
 ws-migrate:
-	docker compose exec websocket python manage.py migrate
+	$(DC) exec websocket python manage.py migrate
 
-ws-makemigrations:
-	docker compose exec websocket python manage.py makemigrations
-
-test:
-	docker compose exec django python manage.py test
+makemigrations:
+	$(DC) exec django python manage.py makemigrations
 
 shell:
-	docker compose exec django python manage.py shell
+	$(DC) exec django python manage.py shell
+
+ws-shell:
+	$(DC) exec websocket python manage.py shell
 
 django-bash:
-	docker compose exec django bash
+	$(DC) exec django bash
 
+db-shell:
+	$(DC) exec db1 psql -U pathwise_admin -d pathwise-db
+
+db-restore:
+	cat backup.sql | $(DC) exec -T db1 psql -U pathwise_admin -d pathwise-db
+
+db-backup:
+	$(DC) exec db1 pg_dump -U pathwise_admin pathwise-db > backup.sql
+
+# Django Commands (Production)
+prod-migrate:
+	$(DCP) exec django python manage.py migrate
+
+prod-ws-migrate:
+	$(DCP) exec websocket python manage.py migrate
+
+prod-shell:
+	$(DCP) exec django python manage.py shell
+
+prod-ws-shell:
+	$(DCP) exec websocket python manage.py shell
+
+prod-bash:
+	$(DCP) exec django bash
+
+prod-db-shell:
+	$(DCP) exec db1 psql -U pathwise_admin -d pathwise-db
+
+prod-db-restore:
+	cat backup.sql | $(DCP) exec -T db1 psql -U pathwise_admin -d pathwise-db
+
+# Monitoring Logs
 logs:
-	docker compose logs -f
+	$(DC) logs -f
 
-ai-setup:
-	cd ai-service && python3 -m venv venv && ./venv/bin/pip install -r requirements.txt
+prod-logs:
+	$(DCP) logs -f
 
-ai-run:
-	cd ai-service && ./venv/bin/uvicorn main:app --reload --port 8002
+# Specific Service Logs
+logs-django:
+	$(DC) logs -f django
 
-ai-ingest:
-	cd ai-service && ./venv/bin/python scripts/ingest.py
-
-# ai-up:
-# 	docker compose up -d ai-service
-
-# ai-logs:
-# 	docker compose logs -f ai-service
-
-# ai-bash:
-# 	docker compose exec ai-service bash
+# Cleanup
+prune:
+	sudo docker system prune -a -f
+	sudo docker image prune -f
 
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +
 	find . -type f -name "*.pyc" -delete
-
-
-
-

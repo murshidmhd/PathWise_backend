@@ -1,6 +1,8 @@
 import json
 import google.generativeai as genai
 from django.conf import settings
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 from assessments.models import AssessmentReport
 from students.models import StudentProfile
 from .models import CareerRoadmap, RoadmapMilestone
@@ -94,7 +96,6 @@ def generate_roadmap(user, assessment_id, custom_career_title=None):
             "Assessment report not found.", status_code=404
         ) from exc
 
-    # get top career
     # Use custom title if provided, otherwise fallback to assessment
     career_title = custom_career_title or (
         report.recommended_careers[0] if report.recommended_careers else None
@@ -103,6 +104,25 @@ def generate_roadmap(user, assessment_id, custom_career_title=None):
     if not career_title:
         raise RoadmapServiceError(
             "Please provide a career title or complete your assessment."
+        )
+
+    # --- ENFORCE LIMITS & DUPLICATES ---
+    normalized_title = " ".join(career_title.lower().split())
+
+    # 1. Max 5 check
+    roadmap_count = CareerRoadmap.objects.filter(student=student).count()
+    if roadmap_count >= 5:
+        raise RoadmapServiceError(
+            "You have reached the maximum limit of 5 roadmaps.", status_code=400
+        )
+
+    # 2. Duplicate check (Normalized)
+    already_exists = CareerRoadmap.objects.filter(
+        student=student, normalized_career_title=normalized_title
+    ).exists()
+    if already_exists:
+        raise RoadmapServiceError(
+            f"You already have a roadmap for '{career_title}'.", status_code=400
         )
 
     # generate from gemini
@@ -118,6 +138,7 @@ def generate_roadmap(user, assessment_id, custom_career_title=None):
         student=student,
         assessment_id=assessment_id,
         career_title=career_title,
+        normalized_career_title=normalized_title,
         title=roadmap_data.get("title"),
         status="active",
     )
@@ -140,6 +161,16 @@ def generate_roadmap(user, assessment_id, custom_career_title=None):
             )
         )
     RoadmapMilestone.objects.bulk_create(milestones)
+
+    # --- SEND NOTIFICATION ---
+    from backend.notification_utils import send_notification
+    send_notification(
+        user_id=user.id,
+        title="Roadmap Ready! 🚀",
+        message=f"Your career roadmap for '{career_title}' is now available in your dashboard.",
+        notification_type="roadmap",
+        data={"roadmap_id": str(roadmap.id)}
+    )
 
     return roadmap
 

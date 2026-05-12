@@ -16,10 +16,7 @@ class RegisterSerializer(serializers.ModelSerializer):
     qualification = serializers.CharField(required=False, allow_blank=True)
     experience_years = serializers.IntegerField(required=False, allow_null=True)
     specialization = serializers.CharField(required=False, allow_blank=True)
-    certificate = serializers.FileField(
-        required=False,
-        allow_null=True,
-    )
+    certificate = serializers.FileField(required=False, allow_null=True)
     role = serializers.ChoiceField(choices=ALLOWED_REGISTRATION_ROLES)
 
     # print("SERIALIZER")

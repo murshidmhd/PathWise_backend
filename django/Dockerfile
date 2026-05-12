@@ -22,5 +22,5 @@ COPY . .
 # 5. Expose the port for your Django API
 EXPOSE 8000
 
-# 6. Default command (This starts the website)
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+# 6. Default command (Daphne handles both HTTP and WebSockets)
+CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "backend.asgi:application"]

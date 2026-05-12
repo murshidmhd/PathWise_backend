@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import StudentProfile
+from .models import StudentProfile, UserSkill, SkillRecommendation
 from payments.models import Wallet
 
 
@@ -77,3 +77,16 @@ class StudentProfileSerializer(serializers.ModelSerializer):
 def create_student_profile(user):
     full_name = f"{user.first_name} {user.last_name}".strip() or user.email
     return StudentProfile.objects.create(user=user, full_name=full_name)
+
+
+class UserSkillSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserSkill
+        fields = ["name", "level", "category"]
+
+
+class SkillRecommendationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SkillRecommendation
+        fields = ["skill_name", "reason"]
+        extra_kwargs = {"skill_name": {"source": "skill_name"}} # for consistent naming if needed

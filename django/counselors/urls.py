@@ -8,10 +8,14 @@ from .views import (
     CounselorReviewView,
     AvailableCounselorListView,
     CounselorRequestView,
+    CounselorFilterOptionsView,
+    ToggleFavoriteCounselorView,
+    FavoriteCounselorListView,
 )
 
 
 urlpatterns = [
+    path("filter-options/", CounselorFilterOptionsView.as_view(), name="filter-options"),
     path("profile/", CounselorProfileView.as_view(), name="counselor-profile"),
     path(
         "reviews/<int:counselor_id>/",
@@ -42,5 +46,11 @@ urlpatterns = [
         "request/",
         CounselorRequestView.as_view(),
         name="counselor-request",
+    ),
+    path("favorites/", FavoriteCounselorListView.as_view(), name="favorite-list"),
+    path(
+        "<int:counselor_id>/favorite/",
+        ToggleFavoriteCounselorView.as_view(),
+        name="toggle-favorite",
     ),
 ]

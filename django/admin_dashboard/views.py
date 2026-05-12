@@ -122,6 +122,28 @@ class AdminAssignCounselorView(APIView):
 
         student.refresh_from_db()
 
+        # SEND NOTIFICATION TO STUDENT
+        if student.assigned_counselor:
+            from notifications.utils import send_notification
+            
+            # Notify Student
+            send_notification(
+                user_id=student.user.id,
+                title="Counselor Assigned! 🎓",
+                message=f"Admin has assigned {student.assigned_counselor.full_name} as your mentor. You can now start chatting!",
+                notification_type="mentor_assignment",
+                data={"counselor_id": student.assigned_counselor.id}
+            )
+
+            # Notify Counselor
+            send_notification(
+                user_id=student.assigned_counselor.user.id,
+                title="New Student Assigned! 👤",
+                message=f"Admin has assigned a new student, {student.full_name}, to you. Check your student list to get started.",
+                notification_type="student_assignment",
+                data={"student_id": student.id}
+            )
+
         return Response(
             AdminAssignCounselorSerializer(student).data,
             status=status.HTTP_200_OK,
@@ -166,6 +188,16 @@ class AdminCounselorRequestActionView(APIView):
             CounselorRequest.objects.filter(student=student, status="pending").exclude(
                 pk=pk
             ).update(status="rejected")
+
+            # SEND NOTIFICATION
+            from notifications.utils import send_notification
+            send_notification(
+                user_id=student.user.id,
+                title="Counselor Request Accepted! 🎉",
+                message=f"Good news! Your request for counselor {counselor_request.counselor.full_name} has been approved. You can now start chatting.",
+                notification_type="mentor_request",
+                data={"counselor_id": counselor_request.counselor.id}
+            )
 
             return Response({"message": "Request approved and counselor assigned."})
 

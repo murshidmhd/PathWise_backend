@@ -1,10 +1,11 @@
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from rest_framework.generics import ListAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import CounselorProfile, CounselorReview, CounselorRequest
+from .models import CounselorProfile, CounselorReview, CounselorRequest, FavoriteCounselor
 from .permissions import IsCounselorUserRole, IsStudentUserRole
 from students.models import StudentProfile
 from payments.services import PointService
@@ -145,9 +146,48 @@ class AvailableCounselorListView(ListAPIView):
     serializer_class = AvailableCounselorSerializer
 
     def get_queryset(self):
-        return CounselorProfile.objects.filter(
+        queryset = CounselorProfile.objects.filter(
             approval_status="approved", is_available=True
         ).order_by("-rating")
+
+        # Get filter parameters
+        search = self.request.query_params.get("search")
+        specialization = self.request.query_params.get("specialization")
+        location = self.request.query_params.get("location")
+        min_rating = self.request.query_params.get("min_rating")
+        min_experience = self.request.query_params.get("min_experience")
+
+        # Apply Search
+        if search:
+            queryset = queryset.filter(
+                Q(user__full_name__icontains=search)
+                | Q(specialization__icontains=search)
+                | Q(qualification__icontains=search)
+                | Q(bio__icontains=search)
+                | Q(city__icontains=search)
+                | Q(state__icontains=search)
+            )
+
+        # Apply Specific Filters
+        if specialization and specialization.lower() != "all":
+            queryset = queryset.filter(specialization__iexact=specialization)
+
+        if location and location.lower() != "all":
+            queryset = queryset.filter(Q(city__icontains=location) | Q(state__icontains=location))
+
+        if min_rating and min_rating.lower() != "all":
+            try:
+                queryset = queryset.filter(rating__gte=float(min_rating))
+            except ValueError:
+                pass
+
+        if min_experience and min_experience.lower() != "all":
+            try:
+                queryset = queryset.filter(experience_years__gte=int(min_experience))
+            except ValueError:
+                pass
+
+        return queryset
 
 
 # you want to check this area
@@ -188,6 +228,25 @@ class CounselorRequestView(APIView):
                 )
 
             serializer.save(student=student_profile)
+
+            # NOTIFY ADMINS
+            try:
+                from notifications.utils import send_notification
+                from django.contrib.auth import get_user_model
+                User = get_user_model()
+                # Notify all superusers or staff
+                admins = User.objects.filter(is_superuser=True)
+                for admin in admins:
+                    send_notification(
+                        user_id=admin.id,
+                        title="New Mentor Request! 📥",
+                        message=f"Student {student_profile.full_name} has requested {serializer.validated_data.get('counselor').user.full_name} as their mentor.",
+                        notification_type="admin_alert",
+                        data={"request_id": serializer.data.get('id')}
+                    )
+            except Exception as e:
+                print(f"DEBUG: Admin notification failed: {e}")
+
             return Response(serializer.data, status=201)
         return Response(serializer.errors, status=400)
 
@@ -197,4 +256,59 @@ class CounselorRequestView(APIView):
             "-created_at"
         )
         serializer = CounselorRequestSerializer(requests, many=True)
+        return Response(serializer.data)
+
+
+class CounselorFilterOptionsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        specializations = (
+            CounselorProfile.objects.filter(approval_status="approved")
+            .values_list("specialization", flat=True)
+            .distinct()
+        )
+        locations = (
+            CounselorProfile.objects.filter(approval_status="approved")
+            .values_list("city", flat=True)
+            .distinct()
+        )
+
+        return Response(
+            {
+                "specializations": sorted(list(set(s for s in specializations if s))),
+                "locations": sorted(list(set(l for l in locations if l))),
+            }
+        )
+
+
+class ToggleFavoriteCounselorView(APIView):
+    permission_classes = [IsAuthenticated, IsStudentUserRole]
+
+    def post(self, request, counselor_id):
+        student_profile = get_object_or_404(StudentProfile, user=request.user)
+        counselor_profile = get_object_or_404(CounselorProfile, id=counselor_id)
+
+        favorite, created = FavoriteCounselor.objects.get_or_create(
+            student=student_profile, counselor=counselor_profile
+        )
+
+        if not created:
+            favorite.delete()
+            return Response({"status": "unfavorited"})
+
+        return Response({"status": "favorited"})
+
+
+class FavoriteCounselorListView(APIView):
+    permission_classes = [IsAuthenticated, IsStudentUserRole]
+
+    def get(self, request):
+        student_profile = get_object_or_404(StudentProfile, user=request.user)
+        favorites = FavoriteCounselor.objects.filter(
+            student=student_profile
+        ).select_related("counselor", "counselor__user")
+
+        counselors = [f.counselor for f in favorites]
+        serializer = AvailableCounselorSerializer(counselors, many=True)
         return Response(serializer.data)
