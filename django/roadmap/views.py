@@ -31,6 +31,20 @@ class GenerateRoadmapView(APIView):
 
         try:
             roadmap = generate_roadmap(request.user, assessment_id)
+            
+            # NOTIFY STUDENT
+            try:
+                from notifications.utils import send_notification
+                send_notification(
+                    user_id=request.user.id,
+                    title="Roadmap Ready! 🚀",
+                    message=f"Your AI-generated career roadmap for {roadmap.career_title} is complete. Start exploring your milestones!",
+                    notification_type="system",
+                    data={"roadmap_id": roadmap.id}
+                )
+            except Exception as e:
+                print(f"DEBUG: Roadmap notification failed: {e}")
+                
         except RoadmapServiceError as exc:
             # Optional: Refund if generation fails
             PointService.add_points(
@@ -113,6 +127,20 @@ class CustomRoadmapView(APIView):
                 assessment_id=assessment_id,
                 custom_career_title=career_title,
             )
+
+            # NOTIFY STUDENT
+            try:
+                from notifications.utils import send_notification
+                send_notification(
+                    user_id=request.user.id,
+                    title="Custom Roadmap Ready! ✨",
+                    message=f"Your custom career roadmap for {career_title} has been generated successfully.",
+                    notification_type="system",
+                    data={"roadmap_id": roadmap.id}
+                )
+            except Exception as e:
+                print(f"DEBUG: Custom Roadmap notification failed: {e}")
+
         except RoadmapServiceError as exc:
             # Refund if fails
             PointService.add_points(

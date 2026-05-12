@@ -92,8 +92,9 @@ class ChatMessageView(APIView):
             # TRIGGER NOTIFICATION
             if s_id and c_id:
                 receiver_id = c_id if int(sender_id) == s_id else s_id
-                print(f"DEBUG: Notification to receiver: {receiver_id}")
-
+                print(f"--- DEBUG: ChatMessageView ---")
+                print(f"    Room: {room_id} | S: {s_id} | C: {c_id}")
+                print(f"    Sender: {sender_id} | Receiver: {receiver_id}")
 
                 try:
                     send_notification(

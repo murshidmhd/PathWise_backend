@@ -26,8 +26,10 @@ def notification_payload(notification):
 
 def broadcast_notification(notification):
     channel_layer = get_channel_layer()
+    group_name = f"user_{notification.user_id}"
+    print(f"--- DEBUG: Broadcasting notification to group {group_name}: {notification.title} ---")
     async_to_sync(channel_layer.group_send)(
-        f"user_{notification.user_id}",
+        group_name,
         {
             "type": "notify",
             "notification": notification_payload(notification),

@@ -46,6 +46,7 @@ urlpatterns = [
     path("api/roadmap/", include("roadmap.urls")),
     path("api/payments/", include("payments.urls")),
     path("api/chat/", include("chat.urls")),
+    path("api/tenants/", include("tenants.urls")),
     path("api/", include("notifications.urls")),
 ]
 

@@ -29,8 +29,8 @@ class User(AbstractUser):
     ROLE_CHOICES = [
         ("student", "Student"),
         ("counselor", "Counselor"),
-        ("admin", "Admin"),
-        ("platform_admin", "Platform Admin"),  # ← ADDED
+        ("college_admin", "College Admin"),
+        ("platform_admin", "Platform Admin"),
     ]
 
     username = None
@@ -60,5 +60,5 @@ class User(AbstractUser):
         return self.role == "platform_admin"
 
     @property
-    def is_tenant_admin(self):
-        return self.role == "admin"
+    def is_college_admin(self):
+        return self.role == "college_admin"

@@ -65,6 +65,30 @@ class ChatConsumer(AsyncWebsocketConsumer):
             },
         )
 
+        # TRIGGER NOTIFICATION (New logic for WebSocket)
+        try:
+            import re
+            from notifications.utils import send_notification
+            match = re.match(r"room_S(\d+)_C(\d+)", self.room_id)
+            if match:
+                s_id = int(match.group(1))
+                c_id = int(match.group(2))
+                receiver_id = c_id if int(sender_id) == s_id else s_id
+                
+                print(f"--- DEBUG: ChatConsumer Notification ---")
+                print(f"    Receiver: {receiver_id} | Sender: {sender_id}")
+                
+                # Send the notification (Sync call in Async consumer)
+                from asgiref.sync import sync_to_async
+                await sync_to_async(send_notification)(
+                    user_id=receiver_id,
+                    title=f"New message from {sender_name}",
+                    message=message_text[:100],
+                    data={"room_id": self.room_id, "type": "chat_message"}
+                )
+        except Exception as e:
+            print(f"--- DEBUG: ChatConsumer Notification Failed: {e} ---")
+
     @database_sync_to_async
     def save_message(self, sender_id, sender_name, text):
         room, created = ChatRoom.objects.get_or_create(room_id=self.room_id)

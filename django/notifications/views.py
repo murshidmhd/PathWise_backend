@@ -28,11 +28,12 @@ class FCMTokenView(APIView):
 
 class NotificationListView(APIView):
     def get(self, request):
-        user_id = request.query_params.get("user_id")
-        print("user_id", user_id)
+        # Use authenticated user's ID
+        user_id = request.user.id
+        
         if not user_id:
             return Response(
-                {"error": "user_id is required"}, status=status.HTTP_400_BAD_REQUEST
+                {"error": "Authentication required"}, status=status.HTTP_401_UNAUTHORIZED
             )
 
         notifications = Notification.objects.filter(user_id=user_id).order_by(
@@ -45,13 +46,32 @@ class NotificationListView(APIView):
 class MarkNotificationReadView(APIView):
     def post(self, request, pk):
         try:
-            notification = Notification.objects.get(pk=pk)
+            # Ensure the notification belongs to the authenticated user
+            notification = Notification.objects.get(pk=pk, user_id=request.user.id)
             notification.is_read = True
             notification.save()
             return Response({"message": "Notification marked as read"})
         except Notification.DoesNotExist:
             return Response(
-                {"error": "Notification not found"}, status=status.HTTP_404_NOT_FOUND
+                {"error": "Notification not found or access denied"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+
+class MarkAllNotificationsReadView(APIView):
+    def post(self, request):
+        Notification.objects.filter(user_id=request.user.id, is_read=False).update(is_read=True)
+        return Response({"message": "All notifications marked as read"})
+
+
+class DeleteNotificationView(APIView):
+    def delete(self, request, pk):
+        try:
+            notification = Notification.objects.get(pk=pk, user_id=request.user.id)
+            notification.delete()
+            return Response({"message": "Notification deleted"}, status=status.HTTP_204_NO_CONTENT)
+        except Notification.DoesNotExist:
+            return Response(
+                {"error": "Notification not found or access denied"}, status=status.HTTP_404_NOT_FOUND
             )
 
 

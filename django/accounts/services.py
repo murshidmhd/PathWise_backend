@@ -121,6 +121,22 @@ def _create_user_from_registration(validated_data):
             certificate_url=certificate,
         )
 
+        # NOTIFY ADMINS ABOUT NEW COUNSELOR
+        try:
+            from notifications.utils import send_notification
+            # Notify all superusers
+            admins = User.objects.filter(is_superuser=True)
+            for admin in admins:
+                send_notification(
+                    user_id=admin.id,
+                    title="New Counselor Joined! 💼",
+                    message=f"A new professional, {user.full_name}, has registered as a counselor and is waiting for your approval.",
+                    notification_type="admin_alert",
+                    data={"counselor_id": user.id}
+                )
+        except Exception as e:
+            print(f"DEBUG: Admin counselor notification failed: {e}")
+
     return user
 
 
