@@ -62,3 +62,41 @@ class CreateCollegeAdminView(APIView):
         finally:
             # Always switch back to public schema to avoid affecting other requests
             connection.set_schema_to_public()
+
+class CreateOrganizationView(APIView):
+    permission_classes = [IsPlatformAdmin]
+
+    def post(self, request):
+        from .models import Domain
+        from .serializers import CreateOrganizationSerializer
+        
+        serializer = CreateOrganizationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        try:
+            # 1. Create Organization (triggers schema creation)
+            org = Organization.objects.create(
+                name=serializer.validated_data['name'],
+                schema_name=serializer.validated_data['schema_name'],
+                plan=serializer.validated_data.get('plan', 'free')
+            )
+            
+            # 2. Create Domain
+            Domain.objects.create(
+                domain=serializer.validated_data['domain_name'],
+                tenant=org,
+                is_primary=True
+            )
+            
+            return Response({
+                "message": f"Organization '{org.name}' created successfully with schema '{org.schema_name}'",
+                "organization": {
+                    "id": org.id,
+                    "name": org.name,
+                    "schema_name": org.schema_name,
+                    "domain": serializer.validated_data['domain_name']
+                }
+            }, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
