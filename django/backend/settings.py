@@ -64,6 +64,7 @@ SHARED_APPS = [
     "corsheaders",
     "storages",
     "channels",
+    "accounts",        # Moved here to allow Platform Admin login
 ]
 
 TENANT_APPS = [
@@ -114,6 +115,8 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = "backend.urls"
+PUBLIC_SCHEMA_URLCONF = "backend.urls"
+
 REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_AUTHENTICATION_CLASSES": (
