@@ -44,6 +44,11 @@ class User(AbstractUser):
     is_approved = models.BooleanField(default=False)
 
     google_id = models.CharField(max_length=255, null=True, blank=True)
+    
+    # Invitation Flow
+    # i want to look here what is thsi and why
+    invitation_token = models.CharField(max_length=100, null=True, blank=True, unique=True)
+    invitation_created_at = models.DateTimeField(null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

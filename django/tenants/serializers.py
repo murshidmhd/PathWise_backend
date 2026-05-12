@@ -14,12 +14,15 @@ class OrganizationSerializer(serializers.ModelSerializer):
         model = Organization
         fields = ['id', 'name', 'schema_name', 'plan', 'created_at', 'domains']
 
-class CreateCollegeAdminSerializer(serializers.Serializer):
+class InviteCollegeAdminSerializer(serializers.Serializer):
     email = serializers.EmailField()
-    password = serializers.CharField(write_only=True)
     first_name = serializers.CharField()
     last_name = serializers.CharField()
     organization_id = serializers.IntegerField()
+
+class SetupAccountSerializer(serializers.Serializer):
+    token = serializers.CharField()
+    password = serializers.CharField(write_only=True)
 
 class CreateOrganizationSerializer(serializers.ModelSerializer):
     domain_name = serializers.CharField(write_only=True)
