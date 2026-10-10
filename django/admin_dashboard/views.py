@@ -24,7 +24,9 @@ class AdminUserListView(APIView):
     permission_classes = [IsAdminUserRole]
 
     def get(self, request):
-        students = StudentProfile.objects.select_related("user").order_by("-created_at")
+        students = StudentProfile.objects.select_related(
+            "user", "assigned_counselor", "assigned_counselor__user"
+        ).order_by("-created_at")
         counselors = CounselorProfile.objects.select_related("user").order_by(
             "-created_at"
         )

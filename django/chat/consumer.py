@@ -91,6 +91,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def save_message(self, sender_id, sender_name, text):
+        from django.db import connection
+        tenant = self.scope.get("tenant")
+        if tenant:
+            connection.set_tenant(tenant)
         room, created = ChatRoom.objects.get_or_create(room_id=self.room_id)
         return Message.objects.create(
             room=room, sender_id=sender_id, sender_name=sender_name, text=text

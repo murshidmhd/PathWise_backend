@@ -10,6 +10,16 @@ from channels.auth import AuthMiddlewareStack
 from channels.db import database_sync_to_async
 from chat.routing import websocket_urlpatterns as chat_urls
 from notifications.routing import websocket_urlpatterns as notif_urls
+from simulations.routing import websocket_urlpatterns as sim_urls
+
+@database_sync_to_async
+def get_tenant_by_host(host):
+    from django_tenants.utils import get_tenant_model
+    TenantModel = get_tenant_model()
+    try:
+        return TenantModel.objects.get(domains__domain=host)
+    except TenantModel.DoesNotExist:
+        return None
 
 # Custom middleware to handle subdomains in WebSockets
 class TenantAwareMiddleware:
@@ -17,8 +27,7 @@ class TenantAwareMiddleware:
         self.inner = inner
 
     async def __call__(self, scope, receive, send):
-        from django_tenants.utils import get_tenant_model, remove_www
-        from django.db import connection
+        from django_tenants.utils import remove_www
         
         hostname = None
         for header in scope.get("headers", []):
@@ -27,16 +36,9 @@ class TenantAwareMiddleware:
                 break
         
         if hostname:
-            TenantModel = get_tenant_model()
-            try:
-                @database_sync_to_async
-                def get_tenant(host):
-                    return TenantModel.objects.get(domains__domain=host)
-                
-                tenant = await get_tenant(hostname)
-                connection.set_tenant(tenant)
-            except Exception:
-                pass
+            tenant = await get_tenant_by_host(hostname)
+            if tenant:
+                scope["tenant"] = tenant
                 
         return await self.inner(scope, receive, send)
 
@@ -45,7 +47,7 @@ application = ProtocolTypeRouter({
     "websocket": TenantAwareMiddleware(
         AuthMiddlewareStack(
             URLRouter(
-                chat_urls + notif_urls
+                chat_urls + notif_urls + sim_urls
             )
         )
     ),

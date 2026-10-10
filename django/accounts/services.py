@@ -144,7 +144,13 @@ def registration(validated_data, recaptcha_token):
     if not _is_valid_recaptcha(recaptcha_token):
         raise ServiceError({"error": "Invalid reCAPTCHA"})
 
+    from django.db import connection
     pending_data = dict(validated_data)
+    if connection.schema_name == "public" and pending_data.get("role") in ["student", "counselor"]:
+        raise ServiceError(
+            "Student and Counselor accounts must be registered under a college organization. Please access via your college portal (e.g. http://demo.localhost:5173)."
+        )
+
     email = pending_data["email"]
     certificate = pending_data.pop("certificate", None)
 
@@ -362,6 +368,12 @@ def complete_google_registration(temp_token, role):
     user_data = cache.get(f"google_temp:{temp_token}")
     if not user_data:
         raise ServiceError({"message": "Invalid or expired token"})
+
+    from django.db import connection
+    if connection.schema_name == "public" and role in ["student", "counselor"]:
+        raise ServiceError(
+            "Student and Counselor accounts must be registered under a college organization. Please access via your college portal (e.g. http://demo.localhost:5173)."
+        )
 
     user = User.objects.create_user(
         email=user_data["email"],

@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str
     # ── App ──────────────────────────────────────────────
     APP_NAME: str = "PathWise AI Service"
-    DEBUG: bool = False
+    DEBUG: bool = True
 
     # ── Groq ─────────────────────────────────────────────
     GROQ_API_KEY: str

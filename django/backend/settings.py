@@ -65,6 +65,7 @@ SHARED_APPS = [
     "storages",
     "channels",
     "accounts",        # Moved here to allow Platform Admin login
+    "rest_framework_simplejwt.token_blacklist",
 ]
 
 TENANT_APPS = [
@@ -83,6 +84,7 @@ TENANT_APPS = [
     "notifications",
     "chat",
     "signaling",
+    "simulations",
     "rest_framework.authtoken",
     "rest_framework_simplejwt.token_blacklist",
 ]
@@ -158,21 +160,43 @@ WSGI_APPLICATION = "backend.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django_tenants.postgresql_backend",
-        "NAME": os.getenv("DB_NAME", "career_db"),
-        "USER": os.getenv("DB_USER", "career_user"),
-        "PASSWORD": os.getenv("DB_PASSWORD", ""),
-        "HOST": os.getenv("DB_HOST", "localhost"),
-        "PORT": os.getenv("DB_PORT", "5432"),
-        "CONN_MAX_AGE": 600,  # Keeps the connection open for 10 minutes
-        "OPTIONS": {
-            "sslmode": os.getenv("DB_SSLMODE", "require"),
-        },
-    }
-}
+# DATABASES = {
+#     "default": {
+#         "ENGINE": "django_tenants.postgresql_backend",
+#         "NAME": os.getenv("DB_NAME", "career_db"),
+#         "USER": os.getenv("DB_USER", "career_user"),
+#         "PASSWORD": os.getenv("DB_PASSWORD", ""),
+#         "HOST": os.getenv("DB_HOST", "localhost"),
+#         "PORT": os.getenv("DB_PORT", "5432"),
+#         "CONN_MAX_AGE": 600,  # Keeps the connection open for 10 minutes
+#         "OPTIONS": {
+#             "sslmode": os.getenv("DB_SSLMODE", "require"),
+#         },
+#     }
+# }
 
+
+import os
+
+import dj_database_url
+
+# 1. Parse the standard Supabase URL
+db_config = dj_database_url.config(
+    default=os.environ.get('DATABASE_URL'),
+    conn_max_age=600,
+    ssl_require=True
+)
+
+# 2. OVERRIDE the engine for django-tenants
+db_config['ENGINE'] = 'django_tenants.postgresql_backend'
+
+# 3. Add the required PgBouncer options
+db_config['DISABLE_SERVER_SIDE_CURSORS'] = True  # <-- APPLIED HERE DIRECTLY
+
+# 4. Assign to Django settings
+DATABASES = {
+    'default': db_config
+}
 AUTH_USER_MODEL = "accounts.User"
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
@@ -305,7 +329,7 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [os.getenv("REDIS_URL", "redis://redis:6379/0")],
+            "hosts": [REDIS_URL],
         },
     },
 }
