@@ -1,5 +1,5 @@
-from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, OpenApiResponse, inline_serializer
+from rest_framework import serializers as drf_serializers
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
@@ -21,7 +21,27 @@ class GoogleAuthView(APIView):
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "google_auth"
 
-    
+    @extend_schema(
+        summary="Authenticate with Google",
+        description="Verifies a Google ID token and either logs the user in (returning a JWT) or returns a temp_token if the user needs to select a role for first-time registration.",
+        request=GoogleAuthSerializer,
+        responses={
+            200: OpenApiResponse(
+                description="Authenticated successfully or needs role selection",
+                response=inline_serializer(
+                    name="GoogleAuthResponse",
+                    fields={
+                        "access": drf_serializers.CharField(required=False),
+                        "role": drf_serializers.CharField(required=False),
+                        "temp_token": drf_serializers.CharField(required=False),
+                        "requires_role_selection": drf_serializers.BooleanField(required=False),
+                    },
+                ),
+            ),
+            400: OpenApiResponse(description="Invalid Google token"),
+        },
+        tags=["Social Auth"],
+    )
     def post(self, request):
         serializer = GoogleAuthSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -50,6 +70,25 @@ class CompleteGoogleRegistrationView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        summary="Complete Google registration with role",
+        description="After Google OAuth, new users must select a role (student/counselor). This endpoint finalizes their account creation.",
+        request=CompleteGoogleRegistrationSerializer,
+        responses={
+            200: OpenApiResponse(
+                description="Registration complete, JWT returned",
+                response=inline_serializer(
+                    name="CompleteGoogleRegResponse",
+                    fields={
+                        "access": drf_serializers.CharField(),
+                        "role": drf_serializers.CharField(),
+                    },
+                ),
+            ),
+            400: OpenApiResponse(description="Invalid temp_token or role"),
+        },
+        tags=["Social Auth"],
+    )
     def post(self, request):
         serializer = CompleteGoogleRegistrationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

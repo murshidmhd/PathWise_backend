@@ -39,6 +39,8 @@ class StartAssessmentView(APIView):
         status_code = 201 if created else 200
         return Response(AssessmentSerializer(assessment).data, status=status_code)
 
+from students.models import StudentProfile
+from notifications.utils import send_notification
 
 class SubmitAssessmentView(APIView):
     permission_classes = [IsAuthenticated]
@@ -54,6 +56,23 @@ class SubmitAssessmentView(APIView):
                 serializer.validated_data["answers"],
                 serializer.validated_data.get("time_taken"),
             )
+
+            # NOTIFY COUNSELOR
+            try:
+                student = StudentProfile.objects.get(user=request.user)
+                if student.assigned_counselor:
+                    send_notification(
+                        user_id=student.assigned_counselor.user.id,
+                        title="Assessment Completed! 📝",
+                        message=f"Your student {student.full_name} has just completed their assessment. You can now review the report.",
+                        notification_type="student_progress",
+                        data={"student_id": student.id, "assessment_id": assessment.id}
+                    )
+            except Exception as e:
+                print(f"DEBUG: Notification failed: {e}")
+            
+                
+            
         except ServiceError as exc:
             return Response(exc.detail, status=exc.status_code)
 

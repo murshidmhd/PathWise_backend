@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
-from .models import Assessment, AssessmentReport, Question
+from .models import Assessment, AssessmentReport
+from tenants.models import Question
 
 
 class QuestionSerializer(serializers.ModelSerializer):

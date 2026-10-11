@@ -44,34 +44,69 @@ SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "django-insecure-change-me")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env_bool("DJANGO_DEBUG", True)
 
-ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
+ALLOWED_HOSTS = [".localhost", ".pathwise.duckdns.org", "127.0.0.1", "52.66.53.189"]
 
 
 # Application definition
 
-INSTALLED_APPS = [
+SHARED_APPS = [
+    "daphne",
+    "django_tenants",  # must be at the top
+    "tenants",         # your new app
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "accounts",
     "rest_framework",
-    "rest_framework.authtoken",
-    "rest_framework_simplejwt.token_blacklist",
     "drf_spectacular",
     "corsheaders",
+    "storages",
+    "channels",
+    "accounts",        # Moved here to allow Platform Admin login
+    "rest_framework_simplejwt.token_blacklist",
+]
+
+TENANT_APPS = [
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "accounts",
     "admin_dashboard",
     "students",
     "counselors",
     "assessments",
     "roadmap",
     "payments",
+    "notifications",
+    "chat",
+    "signaling",
+    "simulations",
+    "rest_framework.authtoken",
+    "rest_framework_simplejwt.token_blacklist",
+]
+
+INSTALLED_APPS = SHARED_APPS + [app for app in TENANT_APPS if app not in SHARED_APPS]
+
+from corsheaders.defaults import default_headers
+
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    "accept",
+    "authorization",
+    "content-type",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+    "cache-control",
+    "pragma",
 ]
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
+    "django_tenants.middleware.main.TenantMainMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -82,6 +117,8 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = "backend.urls"
+PUBLIC_SCHEMA_URLCONF = "backend.urls"
+
 REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_AUTHENTICATION_CLASSES": (
@@ -123,21 +160,43 @@ WSGI_APPLICATION = "backend.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-DATABASES = {
-    "default": {
-        "ENGINE": os.getenv("DB_ENGINE", "django.db.backends.postgresql"),
-        "NAME": os.getenv("DB_NAME", "career_db"),
-        "USER": os.getenv("DB_USER", "career_user"),
-        "PASSWORD": os.getenv("DB_PASSWORD", ""),
-        "HOST": os.getenv("DB_HOST", "localhost"),
-        "PORT": os.getenv("DB_PORT", "5432"),
-        "CONN_MAX_AGE": 600,  # Keeps the connection open for 10 minutes
-        "OPTIONS": {
-            "sslmode": "require",  # This is the secret sauce for AWS RDS
-        },
-    }
-}
+# DATABASES = {
+#     "default": {
+#         "ENGINE": "django_tenants.postgresql_backend",
+#         "NAME": os.getenv("DB_NAME", "career_db"),
+#         "USER": os.getenv("DB_USER", "career_user"),
+#         "PASSWORD": os.getenv("DB_PASSWORD", ""),
+#         "HOST": os.getenv("DB_HOST", "localhost"),
+#         "PORT": os.getenv("DB_PORT", "5432"),
+#         "CONN_MAX_AGE": 600,  # Keeps the connection open for 10 minutes
+#         "OPTIONS": {
+#             "sslmode": os.getenv("DB_SSLMODE", "require"),
+#         },
+#     }
+# }
 
+
+import os
+
+import dj_database_url
+
+# 1. Parse the standard Supabase URL
+db_config = dj_database_url.config(
+    default=os.environ.get('DATABASE_URL'),
+    conn_max_age=600,
+    ssl_require=True
+)
+
+# 2. OVERRIDE the engine for django-tenants
+db_config['ENGINE'] = 'django_tenants.postgresql_backend'
+
+# 3. Add the required PgBouncer options
+db_config['DISABLE_SERVER_SIDE_CURSORS'] = True  # <-- APPLIED HERE DIRECTLY
+
+# 4. Assign to Django settings
+DATABASES = {
+    'default': db_config
+}
 AUTH_USER_MODEL = "accounts.User"
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
@@ -173,10 +232,11 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
 MEDIA_URL = "/"
 MEDIA_ROOT = BASE_DIR
 
+STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 
 CORS_ALLOW_CREDENTIALS = True
 
@@ -195,9 +255,24 @@ RECAPTCHA_VERIFY_URL = os.getenv(
 )
 
 
-CORS_ALLOWED_ORIGINS = env_list(
-    "CORS_ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"
-)
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "https://path-wise-frontend.vercel.app",
+]
+
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^http://.*\.localhost:5173$",
+    r"^https://.*\.pathwise\.duckdns\.org$",
+]
+
+CORS_ALLOW_CREDENTIALS = True
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://path-wise-frontend.vercel.app",
+    "https://pathwise.duckdns.org",
+    "https://*.pathwise.duckdns.org",
+]
 
 
 # Email settings
@@ -233,12 +308,9 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 # Use the environment variable 'REDIS_URL', or default to localhost if not found
 REDIS_URL = os.environ.get("REDIS_URL", "redis://127.0.0.1:6379/0")
 
+# Celery settings
 CELERY_BROKER_URL = REDIS_URL
 CELERY_RESULT_BACKEND = REDIS_URL
-
-# Celery settings
-CELERY_BROKER_URL = "redis://redis:6379/0"
-CELERY_RESULT_BACKEND = "redis://redis:6379/0"
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
@@ -251,6 +323,17 @@ CACHES = {
     }
 }
 
+ASGI_APPLICATION = "backend.asgi.application"
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [REDIS_URL],
+        },
+    },
+}
+
 CELERY_BEAT_SCHEDULE = {
     "cleanup-pending-certificates-every-15-mins": {
         "task": "accounts.tasks.cleanup_pending_certificates",
@@ -260,3 +343,52 @@ CELERY_BEAT_SCHEDULE = {
 
 RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID")
 RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET")
+
+
+# This prevents Django from redirecting non-slash URLs,
+# which often solves the "Redirect not allowed" issue.
+APPEND_SLASH = False
+# SECURE_SSL_REDIRECT = False
+# SESSION_COOKIE_SECURE = False
+# CSRF_COOKIE_SECURE = False
+
+
+CORS_ALLOW_CREDENTIALS = True
+
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+
+# ── AWS S3 Storage ──────────────────────────────────────────────
+# When AWS credentials are set, all FileField uploads go to S3.
+# In local development (no AWS vars), Django falls back to local storage.
+AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
+AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_STORAGE_BUCKET_NAME", "pathwise-uploads")
+AWS_S3_REGION_NAME = os.getenv("AWS_S3_REGION_NAME", "ap-south-1")  # Mumbai
+AWS_S3_FILE_OVERWRITE = False  # Don't overwrite files with same name
+AWS_DEFAULT_ACL = None  # Use bucket's default ACL
+AWS_QUERYSTRING_AUTH = True  # Signed URLs (private files)
+AWS_S3_SIGNATURE_VERSION = "s3v4"
+
+if AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY:
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+
+
+
+
+TENANT_MODEL = 'tenants.Organization'
+TENANT_DOMAIN_MODEL = 'tenants.Domain'
+
+DATABASE_ROUTERS = (
+    'django_tenants.routers.TenantSyncRouter',
+)
+
+# FIREBASE NOTIFICATIONS
+FIREBASE_ACCOUNT_KEY_PATH = os.path.join(BASE_DIR, "firebase-credentials.json")

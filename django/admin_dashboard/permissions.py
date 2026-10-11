@@ -9,6 +9,6 @@ class IsAdminUserRole(BasePermission):
         return bool(
             user
             and user.is_authenticated
-            and (user.role == "admin" or user.is_staff or user.is_superuser)
+            and (user.role in ["platform_admin", "college_admin", "admin"] or user.is_staff or user.is_superuser)
         )
 

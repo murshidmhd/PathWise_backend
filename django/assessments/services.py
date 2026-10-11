@@ -8,7 +8,8 @@ from django.utils import timezone
 from backend.settings import GEMINI_API_KEY
 from students.models import StudentProfile
 
-from .models import Assessment, AssessmentAnswer, AssessmentReport, Question
+from .models import Assessment, AssessmentAnswer, AssessmentReport
+from tenants.models import Question
 
 
 RIASEC_LABELS = {

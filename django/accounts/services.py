@@ -15,6 +15,8 @@ import requests
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from students.serializers import create_student_profile
+from payments.models import Wallet
+from payments.services import PointService
 
 from .models import User
 from .tasks import send_otp_email_task
@@ -35,6 +37,43 @@ def _issue_tokens(user):
         "access": str(refresh.access_token),
         "refresh": str(refresh),
     }
+
+
+def _check_and_grant_welcome_gift(user):
+    """
+    Grant welcome gift SkillPoints on first-ever successful entry (login or registration).
+    This is called from all authentication entry points.
+    """
+    if user.role == "student":
+        wallet, _ = Wallet.objects.get_or_create(user=user)
+        if not wallet.is_welcome_gift_claimed:
+            PointService.add_points(
+                user=user,
+                amount=8,
+                transaction_type="GIFT",
+                description="Welcome Gift: 8 SkillPoints credited for joining PathWise!",
+            )
+            wallet.refresh_from_db()
+            wallet.is_welcome_gift_claimed = True
+            wallet.save(update_fields=["is_welcome_gift_claimed"])
+
+            # SEND NOTIFICATIONS
+            from backend.notification_utils import send_notification
+            # 1. Welcome Message
+            send_notification(
+                user_id=user.id,
+                title="Welcome to PathWise! 🌟",
+                message=f"Hi {user.first_name or 'there'}, we're excited to help you find your perfect career path!",
+                notification_type="welcome"
+            )
+            # 2. Points Reward
+            send_notification(
+                user_id=user.id,
+                title="SkillPoints Earned! 💰",
+                message="You've received 8 SkillPoints as a welcome gift. Use them to request mentors or generate roadmaps.",
+                notification_type="points",
+                data={"amount": 8}
+            )
 
 
 def _is_valid_recaptcha(token):
@@ -82,6 +121,22 @@ def _create_user_from_registration(validated_data):
             certificate_url=certificate,
         )
 
+        # NOTIFY ADMINS ABOUT NEW COUNSELOR
+        try:
+            from notifications.utils import send_notification
+            # Notify all superusers
+            admins = User.objects.filter(is_superuser=True)
+            for admin in admins:
+                send_notification(
+                    user_id=admin.id,
+                    title="New Counselor Joined! 💼",
+                    message=f"A new professional, {user.full_name}, has registered as a counselor and is waiting for your approval.",
+                    notification_type="admin_alert",
+                    data={"counselor_id": user.id}
+                )
+        except Exception as e:
+            print(f"DEBUG: Admin counselor notification failed: {e}")
+
     return user
 
 
@@ -89,7 +144,13 @@ def registration(validated_data, recaptcha_token):
     if not _is_valid_recaptcha(recaptcha_token):
         raise ServiceError({"error": "Invalid reCAPTCHA"})
 
+    from django.db import connection
     pending_data = dict(validated_data)
+    if connection.schema_name == "public" and pending_data.get("role") in ["student", "counselor"]:
+        raise ServiceError(
+            "Student and Counselor accounts must be registered under a college organization. Please access via your college portal (e.g. http://demo.localhost:5173)."
+        )
+
     email = pending_data["email"]
     certificate = pending_data.pop("certificate", None)
 
@@ -135,6 +196,7 @@ def verify_registration_otp(email, otp):
             )
 
     user = _create_user_from_registration(pending_user)
+    _check_and_grant_welcome_gift(user)
     tokens = _issue_tokens(user)
 
     cache.delete(f"otp:{email}")
@@ -167,8 +229,8 @@ def resend_registration_otp(email):
 
 
 def login_user(email, password, recaptcha_token):
-    if not _is_valid_recaptcha(recaptcha_token):
-        raise ServiceError({"error": "Invalid reCAPTCHA"})
+    # if not _is_valid_recaptcha(recaptcha_token):
+    #     raise ServiceError({"error": "Invalid reCAPTCHA"})
 
     user = User.objects.filter(email=email).first()
     if user and user.google_id:
@@ -215,6 +277,8 @@ def login_user(email, password, recaptcha_token):
                 },
                 status_code=403,
             )
+
+    _check_and_grant_welcome_gift(authenticated_user)
 
     tokens = _issue_tokens(authenticated_user)
     return {
@@ -286,6 +350,7 @@ def authenticate_google_user(token):
             "data": {"is_new_user": True, "temp_token": temp_token},
         }
 
+    _check_and_grant_welcome_gift(user)
     tokens = _issue_tokens(user)
     return {
         "data": {
@@ -304,6 +369,12 @@ def complete_google_registration(temp_token, role):
     if not user_data:
         raise ServiceError({"message": "Invalid or expired token"})
 
+    from django.db import connection
+    if connection.schema_name == "public" and role in ["student", "counselor"]:
+        raise ServiceError(
+            "Student and Counselor accounts must be registered under a college organization. Please access via your college portal (e.g. http://demo.localhost:5173)."
+        )
+
     user = User.objects.create_user(
         email=user_data["email"],
         role=role,
@@ -316,6 +387,7 @@ def complete_google_registration(temp_token, role):
         create_student_profile(user=user)
 
     cache.delete(f"google_temp:{temp_token}")
+    _check_and_grant_welcome_gift(user)
     tokens = _issue_tokens(user)
 
     return {

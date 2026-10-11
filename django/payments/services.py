@@ -19,6 +19,20 @@ class PointService:
             transaction_type=transaction_type,
             description=description,
         )
+
+        # NOTIFY STUDENT
+        try:
+            from notifications.utils import send_notification
+            title = "Credits Added! 💰" if transaction_type == "PURCHASE" else "Bonus Credits! 🎁"
+            send_notification(
+                user_id=user.id,
+                title=title,
+                message=f"Success! {amount} Career Credits have been added to your wallet. Total Balance: {wallet.balance}",
+                notification_type="payment"
+            )
+        except Exception as e:
+            print(f"DEBUG: Payment notification failed: {e}")
+
         return wallet.balance
 
     @staticmethod
@@ -39,4 +53,17 @@ class PointService:
         PointTransaction.objects.create(
             user=user, amount=-amount, transaction_type="SPEND", description=description
         )
+
+        # NOTIFY STUDENT
+        try:
+            from notifications.utils import send_notification
+            send_notification(
+                user_id=user.id,
+                title="Credits Spent 💳",
+                message=f"You have used {amount} credits. Remaining balance: {wallet.balance}",
+                notification_type="payment"
+            )
+        except Exception as e:
+            print(f"DEBUG: Spend notification failed: {e}")
+
         return True, wallet.balance

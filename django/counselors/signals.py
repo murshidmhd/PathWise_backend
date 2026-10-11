@@ -25,3 +25,13 @@ def refund_on_rejection(sender, instance, **kwargs):
             transaction_type="REFUND",
             description=f"Refund: Request for Counselor {instance.counselor.user.email} was rejected.",
         )
+
+        # SEND NOTIFICATION
+        from backend.notification_utils import send_notification
+        send_notification(
+            user_id=instance.student.user.id,
+            title="Update on Counselor Request ℹ️",
+            message=f"Your request for {instance.counselor.full_name} was not approved at this time. We've refunded your 10 SkillPoints.",
+            notification_type="refund",
+            data={"counselor_id": instance.counselor.id}
+        )

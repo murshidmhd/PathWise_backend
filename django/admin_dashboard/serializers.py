@@ -4,12 +4,28 @@ from counselors.models import CounselorProfile, CounselorRequest
 from students.models import StudentProfile
 
 
+class AssignedCounselorSummarySerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(source="user.email", read_only=True)
+
+    class Meta:
+        model = CounselorProfile
+        fields = [
+            "id",
+            "full_name",
+            "email",
+        ]
+
+
 class AdminStudentListSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(source="user.email", read_only=True)
     role = serializers.CharField(source="user.role", read_only=True)
     is_active = serializers.BooleanField(source="user.is_active", read_only=True)
     is_verified = serializers.BooleanField(source="user.is_verified", read_only=True)
     created_at = serializers.DateTimeField(source="user.created_at", read_only=True)
+    assigned_counselor = serializers.PrimaryKeyRelatedField(read_only=True)
+    assigned_counselor_detail = AssignedCounselorSummarySerializer(
+        source="assigned_counselor", read_only=True
+    )
 
     class Meta:
         model = StudentProfile
@@ -28,8 +44,11 @@ class AdminStudentListSerializer(serializers.ModelSerializer):
             "profile_completed",
             "is_active",
             "is_verified",
+            "assigned_counselor",
+            "assigned_counselor_detail",
             "created_at",
         ]
+
 
 
 class AdminCounselorListSerializer(serializers.ModelSerializer):
@@ -81,17 +100,6 @@ class AdminApprovalSerializer(serializers.ModelSerializer):
 class RejectSerializer(serializers.Serializer):
     reason = serializers.CharField(required=True)
 
-
-class AssignedCounselorSummarySerializer(serializers.ModelSerializer):
-    email = serializers.EmailField(source="user.email", read_only=True)
-
-    class Meta:
-        model = CounselorProfile
-        fields = [
-            "id",
-            "full_name",
-            "email",
-        ]
 
 
 class AdminAssignCounselorSerializer(serializers.ModelSerializer):

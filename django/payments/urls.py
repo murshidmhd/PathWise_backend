@@ -4,6 +4,7 @@ from .views import (
     RazorpayWebhookView,
     VerifyPaymentView,
     PointHistoryView,
+    WalletView,
 )
 
 urlpatterns = [
@@ -11,4 +12,5 @@ urlpatterns = [
     path("webhook/", RazorpayWebhookView.as_view(), name="razorpay-webhook"),
     path("verify/", VerifyPaymentView.as_view(), name="verify-payment"),
     path("history/", PointHistoryView.as_view(), name="point-history"),
+    path("wallet/", WalletView.as_view(), name="wallet-status"),
 ]

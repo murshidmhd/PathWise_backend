@@ -92,3 +92,23 @@ class CounselorRequest(models.Model):
 
     def __str__(self):
         return f"Request from {self.student.full_name} to {self.counselor.full_name} ({self.status})"
+
+
+class FavoriteCounselor(models.Model):
+    student = models.ForeignKey(
+        "students.StudentProfile",
+        on_delete=models.CASCADE,
+        related_name="favorite_counselors",
+    )
+    counselor = models.ForeignKey(
+        CounselorProfile,
+        on_delete=models.CASCADE,
+        related_name="favorited_by",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("student", "counselor")
+
+    def __str__(self):
+        return f"{self.student.full_name} favorited {self.counselor.full_name}"

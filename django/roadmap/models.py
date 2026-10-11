@@ -25,6 +25,7 @@ class CareerRoadmap(models.Model):
         blank=True,
     )
     career_title = models.CharField(max_length=255)
+    normalized_career_title = models.CharField(max_length=255, null=True, blank=True)
     title = models.CharField(max_length=255, null=True, blank=True)
     status = models.CharField(
         max_length=20,
@@ -36,6 +37,12 @@ class CareerRoadmap(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["student", "normalized_career_title"],
+                name="unique_student_roadmap_title",
+            )
+        ]
 
     def __str__(self):
         return f"{self.student} → {self.career_title}"
