@@ -4,7 +4,7 @@ from core.config import settings
 from chat.router import router as chat_router
 
 
-app = FastAPI(title=settings.APP_NAME,                                  =settings.DEBUG)
+app = FastAPI(title=settings.APP_NAME, debug=settings.DEBUG)
 
 app.add_middleware(
     CORSMiddleware,
